@@ -1,0 +1,63 @@
+# flash flashcard server — hardened systemd unit. /opt/flash/current is a
+# symlink to the binary in use (the open flash-server, or a hosted build);
+# repointing it is also the rollback.
+# Install: sudo cp flash.service /etc/systemd/system/ && sudo systemctl daemon-reload
+[Unit]
+Description=flash flashcard server
+After=network-online.target
+Wants=network-online.target
+# Never give up restarting: with the default 5-in-10s limit, anyone who
+# can crash the process repeatedly turns it into a permanent outage that
+# needs a human to `systemctl reset-failed`.
+StartLimitIntervalSec=0
+
+[Service]
+User=flash
+Group=flash
+ExecStart=/opt/flash/current
+WorkingDirectory=/var/lib/flash
+Environment=FLASH_DATA_DIR=/var/lib/flash
+Environment=FLASH_BIND=127.0.0.1:8437
+# FLASH_BASE_URL and the optional groups live in /etc/flash/env.
+EnvironmentFile=-/etc/flash/env
+Restart=on-failure
+RestartSec=2
+# The soft default of 1024 file descriptors is a few hundred held
+# connections away from a stalled accept loop.
+LimitNOFILE=65536
+
+# Sandbox: the process can write /var/lib/flash; ingress stays loopback-only
+# (a reverse proxy or tunnel in front terminates TLS). Outbound HTTPS is
+# allowed for the mail API and an optional media bucket — their anycast IPs
+# aren't publishable, so IPAddressDeny=any is not an option (raises
+# systemd-analyze security exposure a little). AF_INET6 is allowed because
+# public DNS answers are dual-stack.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/flash
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+SystemCallArchitectures=native
+UMask=0077
+MemoryMax=1G
+
+[Install]
+WantedBy=multi-user.target

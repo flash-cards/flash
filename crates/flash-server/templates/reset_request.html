@@ -1,0 +1,23 @@
+{% extends "auth_base.html" %}
+{% block title %}Reset password — Flash{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+{% if sent %}
+<h1>Check your email</h1>
+<p class="muted">If that address has an account, a reset link is on its way.
+It works once and expires in 1 hour.</p>
+{% else %}
+<h1>Reset your password</h1>
+<p class="muted">We'll email you a link to set a new one.</p>
+<form class="fl-card fl-card-pad" method="post" action="/reset" style="display:flex;flex-direction:column;gap:12px">
+  <div class="fl-field">
+    <label class="fl-label" for="reset-email">Email</label>
+    <input class="fl-input" type="email" id="reset-email" name="email" required maxlength="254" autocomplete="email" placeholder="you@example.com">
+  </div>
+{{ captcha_html|safe }}
+  <button class="fl-btn fl-btn-primary" type="submit">Send reset link</button>
+  {% if let Some(msg) = error %}<p class="error">{{ msg }}</p>{% endif %}
+</form>
+<p class="muted" style="margin-top:12px"><a href="/login">Back to sign in</a></p>
+{% endif %}
+{% endblock %}

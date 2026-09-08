@@ -1,0 +1,14 @@
+{% extends "auth_base.html" %}
+{% block title %}Authorization request refused — Flash{% endblock %}
+{% block content %}
+<h1>That request can't be completed</h1>
+<div class="fl-card fl-card-pad" style="text-align:left;display:flex;flex-direction:column;gap:12px">
+  <p>The app that sent you here made a request Flash can't accept
+  (<code>{{ code }}</code>). Nothing was authorized and you have not been
+  sent anywhere.</p>
+  <p class="fl-hint">If you were adding a connector, go back to the app and
+  try again; if the problem repeats, the app's connector is misconfigured
+  and its maker will want to know the code above.</p>
+  <p><a class="fl-btn fl-btn-secondary" href="/" style="width:auto">Back to Flash</a></p>
+</div>
+{% endblock %}

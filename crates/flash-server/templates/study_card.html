@@ -1,0 +1,59 @@
+{% match card %}
+{% when Some(card) %}
+{# Warm the browser cache: this card's hidden back, then the next card. #}
+{% for id in card.preload %}<link rel="preload" as="image" href="/media/{{ id }}">{% endfor %}
+{% for id in card.prefetch %}<link rel="prefetch" href="/media/{{ id }}">{% endfor %}
+{% if total > 0 %}
+<div class="fl-progress"><div style="width:{{ total.saturating_sub(remaining.clone()) * 100 / total }}%"></div></div>
+{% endif %}
+<div class="fl-card study-card">
+  <div class="front">{% if let Some(html) = card.front_html %}<div class="card-rich">{{ html|safe }}</div>{% else %}{{ card.front }}{% endif %}</div>
+  {% if let Some(r) = revealed %}
+  {% if let Some(diff) = r.typed_diff %}
+  <div class="type-diff mono">{% for s in diff %}<span class="{% if s.ok %}type-ok{% else %}type-bad{% endif %}">{{ s.text }}</span>{% endfor %}</div>
+  {% endif %}
+  <div class="study-back">{% if let Some(html) = r.back_html %}<div class="card-rich">{{ html|safe }}</div>{% else %}{{ r.back }}{% endif %}</div>
+  {% endif %}
+</div>
+{% if revealed.is_some() %}
+<div class="row grade-row">
+  <button id="grade-1" class="fl-btn fl-btn-danger" hx-post="/study/review" hx-target="#study"
+          hx-vals='{"session": {{ session_id }}, "card": {{ card.card_id }}, "rating": 1, "total": {{ total }}}'>Again <kbd>1</kbd></button>
+  <button id="grade-2" class="fl-btn fl-btn-secondary grade-hard" hx-post="/study/review" hx-target="#study"
+          hx-vals='{"session": {{ session_id }}, "card": {{ card.card_id }}, "rating": 2, "total": {{ total }}}'>Hard <kbd>2</kbd></button>
+  <button id="grade-3" class="fl-btn fl-btn-secondary" hx-post="/study/review" hx-target="#study"
+          hx-vals='{"session": {{ session_id }}, "card": {{ card.card_id }}, "rating": 3, "total": {{ total }}}'>Good <kbd>3</kbd></button>
+  <button id="grade-4" class="fl-btn fl-btn-secondary" hx-post="/study/review" hx-target="#study"
+          hx-vals='{"session": {{ session_id }}, "card": {{ card.card_id }}, "rating": 4, "total": {{ total }}}'>Easy <kbd>4</kbd></button>
+</div>
+{% else %}
+<div class="row">
+  {% if card.wants_typing %}
+  <input id="type-input" class="fl-input type-input" type="text" name="typed"
+         placeholder="Type the answer…" autocomplete="off" autocapitalize="off" spellcheck="false" autofocus>
+  {% endif %}
+  <button id="reveal-btn" class="fl-btn fl-btn-primary" hx-post="/study/reveal" hx-target="#study"
+          hx-include="#type-input"
+          hx-vals='{"session": {{ session_id }}, "card": {{ card.card_id }}, "remaining": {{ remaining }}, "total": {{ total }}}'>Show answer</button>
+  <kbd>{% if card.wants_typing %}enter{% else %}space{% endif %}</kbd>
+</div>
+{% endif %}
+<p class="mono small muted">{{ remaining }} left</p>
+{% when None %}
+<div class="fl-card study-done">
+  {% if held_by_limit > 0 %}
+  <p class="muted">That's today's allowance done — nice work. <strong>{{ held_by_limit }}</strong> more
+  card{% if held_by_limit != 1 %}s{% endif %} are ready but held back by your daily limit.</p>
+  <form class="row" method="post" action="{% if let Some(d) = scope_deck %}/decks/{{ d }}/boost{% else %}/study/boost{% endif %}" hx-boost="true" hx-push-url="false" hx-select="#study" hx-target="#study" hx-swap="outerHTML show:none">
+    <input type="hidden" name="back" value="study">
+    <span class="fl-hint">More new cards today:</span>
+    <button class="fl-btn fl-btn-sm fl-btn-secondary" type="submit" name="extra" value="5">+5</button>
+    <button class="fl-btn fl-btn-sm fl-btn-secondary" type="submit" name="extra" value="10">+10</button>
+    <button class="fl-btn fl-btn-sm fl-btn-secondary" type="submit" name="extra" value="20">+20</button>
+  </form>
+  {% else %}
+  <p class="muted">Session complete. Nothing else due right now.</p>
+  {% endif %}
+  <a class="fl-btn fl-btn-secondary" href="/">Back to today</a>
+</div>
+{% endmatch %}

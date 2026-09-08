@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Users — Flash{% endblock %}
+{% block page_class %} page-wide{% endblock %}
+{% block content %}
+<h1>Users</h1>
+<table class="fl-table fl-table-scroll">
+  <thead><tr>
+    <th>User</th><th>Email</th>{% if has_plans %}<th>Plan</th>{% endif %}<th>Joined</th><th>Decks</th><th>Cards</th>
+    <th>Reviews</th><th>Last studied</th><th>Last login</th><th>MCP</th>
+  </tr></thead>
+  <tbody>
+  {% for u in users %}
+  <tr>
+    <td class="nowrap">{{ u.display_name }}
+      {% if u.role == "admin" %}<span class="fl-badge fl-badge-accent" style="margin-left:8px">admin</span>{% endif %}</td>
+    <td>{{ u.email }}</td>
+    {% if has_plans %}<td>{{ u.plan_html|safe }}</td>{% endif %}
+    <td class="num">{{ u.joined }}</td>
+    <td class="num">{{ u.deck_count }}</td>
+    <td class="num">{{ u.card_count }}</td>
+    <td class="num">{{ u.review_count }}</td>
+    <td class="num">{{ u.last_studied }}</td>
+    <td class="num">{{ u.last_login }}</td>
+    <td>{{ u.mcp_client }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

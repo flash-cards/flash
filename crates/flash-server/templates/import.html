@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Import — Flash{% endblock %}
+{% block content %}
+<h1>Import</h1>
+<p class="muted">CSV with header <code>front,back,tags,deck</code>, or an Anki <code>.apkg</code> export.
+Cards import as new — unless you bring your Anki study progress with them.</p>
+{{ usage_banner|safe }}
+{{ usage_count|safe }}
+
+<form class="fl-card fl-card-pad" method="post" action="/import/preview" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:14px" data-fl-drop>
+  <div class="fl-field">
+    <span class="fl-label">File</span>
+    <div class="fl-file" data-fl-file>
+      <input type="file" id="import-file" name="file" accept=".csv,.apkg" required>
+      <label for="import-file" class="fl-btn fl-btn-secondary">Choose file</label>
+      <span class="fl-file-name small muted" aria-live="polite">No file chosen — or drop one here</span>
+    </div>
+  </div>
+  <div class="fl-field">
+    <label class="fl-label" for="import-deck">Into deck</label>
+    <input class="fl-input" type="text" id="import-deck" name="deck" placeholder="e.g. Pharmacology" maxlength="120"{% if let Some(p) = preview %} value="{{ p.deck }}"{% endif %}>
+  </div>
+  <div><button class="fl-btn fl-btn-primary" type="submit" data-busy-label="Uploading and reading the deck…">Preview</button></div>
+</form>
+
+{% if let Some(preview) = preview %}
+<div class="fl-card fl-card-pad" style="display:flex;flex-direction:column;gap:14px">
+  <h3>Preview</h3>
+  <p><strong>{{ preview.total }} cards</strong> ready to import from <span class="mono">{{ preview.file_name }}</span> <span class="muted">({{ preview.file_size }})</span>.
+  {% if preview.warnings > 0 %}<span class="fl-badge fl-badge-warn">{{ preview.warnings }} rows skipped</span>{% endif %}</p>
+  <table class="fl-table">
+    <thead><tr><th>Front</th><th>Back</th></tr></thead>
+    <tbody>
+    {% for row in preview.sample %}
+    <tr><td>{{ row.0 }}</td><td class="muted">{{ row.1 }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if !preview.messages.is_empty() %}
+  <p class="fl-hint">{% for message in preview.messages %}{{ message }}<br>{% endfor %}</p>
+  {% endif %}
+  <form method="post" action="/import/commit" style="display:flex;flex-direction:column;gap:10px">
+    <input type="hidden" name="token" value="{{ preview.token }}">
+    <div class="fl-field">
+      <label class="fl-label" for="commit-deck">Into deck</label>
+      <input class="fl-input" type="text" id="commit-deck" name="deck" value="{{ preview.deck }}" placeholder="Name this deck" required maxlength="120"{% if preview.deck.is_empty() %} autofocus{% endif %}>
+      {% if let Some(note) = preview.deck_note %}<span class="fl-hint">{{ note }}</span>{% endif %}
+    </div>
+    {% if preview.progress_reviews > 0 || preview.settings_desc.is_some() || preview.colored_cards > 0 %}
+    <details class="fl-advanced">
+      <summary>Advanced</summary>
+      <div class="fl-advanced-body">
+        {% if preview.colored_cards > 0 %}
+        <label class="fl-check" style="align-items:baseline">
+          <input type="radio" name="colors" value="keep" checked>
+          <span>Keep deck colors, matched to Flash's palette
+          ({{ preview.colored_cards }} colored cards).</span>
+        </label>
+        <label class="fl-check" style="align-items:baseline">
+          <input type="radio" name="colors" value="clean">
+          <span>Clean look &mdash; import without colors.</span>
+        </label>
+        {% endif %}
+        {% if preview.progress_reviews > 0 %}
+        <label class="fl-check" style="align-items:baseline">
+          <input type="checkbox" name="progress" value="on" checked>
+          <span>Bring my study progress ({{ preview.progress_reviews }} reviews found) —
+          cards keep their schedule instead of starting as new.
+          <span class="fl-hint">Review-history stats still start fresh in Flash.</span></span>
+        </label>
+        {% endif %}
+        {% if let Some(desc) = preview.settings_desc %}
+        <label class="fl-check" style="align-items:baseline">
+          <input type="checkbox" name="settings" value="on">
+          <span>Adopt this deck's Anki FSRS settings ({{ desc }}).
+          <span class="fl-hint">Replaces your current scheduling settings.</span></span>
+        </label>
+        {% endif %}
+      </div>
+    </details>
+    {% endif %}
+    <div><button class="fl-btn fl-btn-secondary" type="submit" data-busy-label="Importing cards and media…">Import {{ preview.total }} cards</button></div>
+  </form>
+</div>
+{% endif %}
+
+{% if let Some(n) = imported %}
+<div class="row"><span class="fl-badge fl-badge-good"><span class="fl-badge-dot"></span>imported</span><span class="small muted">{{ n }} cards added.</span></div>
+{% endif %}
+{% endblock %}

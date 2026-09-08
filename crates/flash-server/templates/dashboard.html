@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Flash{% endblock %}
+{% block content %}
+<h1>Today</h1>
+<div id="today-top" style="display:contents">
+<div class="stat-grid">
+  <div class="fl-card fl-card-pad fl-stat"><span class="fl-stat-value">{{ due_now }}</span><span class="fl-stat-label">due now</span></div>
+  <div class="fl-card fl-card-pad fl-stat"><span class="fl-stat-value">{{ new_available }}</span><span class="fl-stat-label">new today</span></div>
+  <div class="fl-card fl-card-pad fl-stat"><span class="fl-stat-value">{{ reviewed_today }}</span><span class="fl-stat-label">reviewed today</span></div>
+</div>
+<div class="row" style="justify-content:space-between;align-items:center;gap:16px">
+  {% if due_now > 0 || new_available > 0 %}
+  <a class="fl-btn fl-btn-primary" href="/study">Start studying</a>
+  {% else %}
+  <p class="muted" style="margin:0">All caught up. Nothing due right now.</p>
+  {% endif %}
+  {% if new_available == 0 && !decks.is_empty() %}
+  <form class="row" method="post" action="/study/boost" hx-boost="true" hx-push-url="false" hx-select="#today-top" hx-target="#today-top" hx-swap="outerHTML show:none">
+    <span class="fl-hint">More new cards today{% if boost_today > 0 %} (+{{ boost_today }} already){% endif %}:</span>
+    <button class="fl-btn fl-btn-sm fl-btn-secondary" type="submit" name="extra" value="5">+5</button>
+    <button class="fl-btn fl-btn-sm fl-btn-secondary" type="submit" name="extra" value="10">+10</button>
+    <button class="fl-btn fl-btn-sm fl-btn-secondary" type="submit" name="extra" value="20">+20</button>
+  </form>
+  {% endif %}
+</div>
+</div>
+
+<section>
+<h2>Decks</h2>
+{% if decks.is_empty() %}
+<p class="muted">No decks yet. <a href="/decks">Create one</a> or <a href="/import">import</a>.</p>
+{% else %}
+<table class="fl-table">
+  <thead><tr><th>Deck</th><th>Due</th><th>New</th><th></th></tr></thead>
+  <tbody>
+  {% for deck in decks %}
+  <tr>
+    <td><a href="/decks/{{ deck.id }}">{{ deck.name }}</a></td>
+    <td class="num">{{ deck.due_count }}</td>
+    <td class="num">{{ deck.new_count }}</td>
+    <td style="text-align:right"><a class="small muted" href="/study?deck={{ deck.id }}">study</a></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+</section>
+
+{% if show_connect_cta %}
+<div class="connect-cta-wrap">
+  <a class="fl-card fl-card-pad connect-cta" href="/connect">
+    <div>
+      <div class="connect-cta-title">Connect your AI</div>
+      <div class="connect-cta-sub">Make cards and study by voice with Claude, ChatGPT, or Grok &mdash; one-minute setup.</div>
+    </div>
+    {% include "ai_stack.html" %}
+  </a>
+  <form method="post" action="/connect/dismiss" class="connect-cta-x">
+    <button type="submit" aria-label="Dismiss" title="Dismiss">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+    </button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

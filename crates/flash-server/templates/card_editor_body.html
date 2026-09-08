@@ -1,0 +1,71 @@
+{# The advanced card editor: note type, formatting toolbar, two rich fields.
+   Shared by the deck page's add form (empty) and the edit dialog (prefilled).
+   Expects `editor: EditorView` in context. All behavior lives in
+   static/editor.js (CSP forbids inline script); without JS the fields are
+   plain contenteditable boxes and the hidden inputs still post. #}
+<div class="editor" data-editor data-type="{{ editor.note_type }}">
+  <div class="editor-top">
+    <div class="fl-field editor-type">
+      <label class="fl-label" for="note-type-{{ editor.card_id }}">Type</label>
+      <select class="fl-input fl-select" name="note_type" id="note-type-{{ editor.card_id }}" data-editor-type>
+        {% for t in editor.types %}<option value="{{ t.0 }}"{% if t.0 == editor.note_type %} selected{% endif %}>{{ t.1 }}</option>{% endfor %}
+      </select>
+    </div>
+    {% if editor.sibling_count > 1 %}<span class="fl-badge editor-siblings" title="Saving regenerates every card of this note">{{ editor.sibling_count }} cards share this note</span>{% endif %}
+  </div>
+
+  <div class="editor-toolbar" role="toolbar" aria-label="Formatting">
+    <button type="button" class="editor-tool" data-cmd="bold" title="Bold (Ctrl+B)" aria-label="Bold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/></svg></button>
+    <button type="button" class="editor-tool" data-cmd="italic" title="Italic (Ctrl+I)" aria-label="Italic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" x2="10" y1="4" y2="4"/><line x1="14" x2="5" y1="20" y2="20"/><line x1="15" x2="9" y1="4" y2="20"/></svg></button>
+    <button type="button" class="editor-tool" data-cmd="underline" title="Underline (Ctrl+U)" aria-label="Underline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4v6a6 6 0 0 0 12 0V4"/><line x1="4" x2="20" y1="20" y2="20"/></svg></button>
+    <button type="button" class="editor-tool" data-cmd="strike" title="Strikethrough" aria-label="Strikethrough"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4H9a3 3 0 0 0-2.83 4"/><path d="M14 12a4 4 0 0 1 0 8H6"/><line x1="4" x2="20" y1="12" y2="12"/></svg></button>
+    <button type="button" class="editor-tool" data-cmd="superscript" title="Superscript" aria-label="Superscript"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 19 8-8"/><path d="m12 19-8-8"/><path d="M20 12h-4c0-1.5.44-2 1.5-2.5S20 8.334 20 7.002c0-.472-.17-.93-.484-1.29a2.105 2.105 0 0 0-2.617-.436c-.42.239-.738.614-.899 1.06"/></svg></button>
+    <button type="button" class="editor-tool" data-cmd="subscript" title="Subscript" aria-label="Subscript"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 5 8 8"/><path d="m12 5-8 8"/><path d="M20 19h-4c0-1.5.442-2 1.5-2.5S20 15.334 20 14c0-.472-.17-.93-.484-1.29a2.105 2.105 0 0 0-2.617-.436c-.42.239-.738.614-.899 1.06"/></svg></button>
+    <span class="editor-sep"></span>
+    <details class="editor-hues">
+      <summary class="editor-tool" title="Text color" aria-label="Text color"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16"/><path d="m6 16 6-12 6 12"/><path d="M8 12h8"/></svg></summary>
+      <div class="editor-hues-pop">
+        {% for hue in editor.hues %}<button type="button" class="editor-swatch hl-{{ hue }}" data-hl="{{ hue }}" title="{{ hue }}" aria-label="Text {{ hue }}">A</button>{% endfor %}
+        <button type="button" class="editor-swatch is-clear" data-hl="" title="No color" aria-label="No color">&times;</button>
+      </div>
+    </details>
+    <details class="editor-hues">
+      <summary class="editor-tool" title="Highlight" aria-label="Highlight"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg></summary>
+      <div class="editor-hues-pop">
+        {% for hue in editor.hues %}<button type="button" class="editor-swatch hl-bg-{{ hue }}" data-hl-bg="{{ hue }}" title="{{ hue }}" aria-label="Highlight {{ hue }}">A</button>{% endfor %}
+        <button type="button" class="editor-swatch is-clear" data-hl-bg="" title="No highlight" aria-label="No highlight">&times;</button>
+      </div>
+    </details>
+    <span class="editor-sep"></span>
+    <button type="button" class="editor-tool" data-cmd="insertUnorderedList" title="Bulleted list" aria-label="Bulleted list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg></button>
+    <button type="button" class="editor-tool" data-cmd="insertOrderedList" title="Numbered list" aria-label="Numbered list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="10" x2="21" y1="6" y2="6"/><line x1="10" x2="21" y1="12" y2="12"/><line x1="10" x2="21" y1="18" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg></button>
+    <button type="button" class="editor-tool" data-cmd="clear" title="Clear formatting" aria-label="Clear formatting"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg></button>
+    <span class="editor-sep"></span>
+    <button type="button" class="editor-tool" data-attach title="Attach image, audio or video" aria-label="Attach media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></button>
+    <input type="file" accept="image/*,audio/*,video/*" multiple hidden data-editor-file>
+    <button type="button" class="editor-tool editor-cloze-only" data-cloze title="Cloze deletion (Ctrl+Shift+C; Ctrl+Shift+Alt+C reuses the last number)" aria-label="Cloze deletion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h3v18h-3"/><path d="M8 21H5V3h3"/></svg></button>
+    <span class="editor-grow"></span>
+    <button type="button" class="editor-tool" data-source title="HTML source" aria-label="Toggle HTML source"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></button>
+  </div>
+
+  <div class="field-cols editor-fields">
+    <div class="fl-field">
+      <label class="fl-label" data-front-label>Front</label>
+      <div class="editor-field" contenteditable="true" data-field="front" data-placeholder="Question" spellcheck="true">{{ editor.front_html|safe }}</div>
+      <textarea class="fl-input editor-source" rows="6" hidden data-source-for="front" spellcheck="false" aria-label="Front HTML source"></textarea>
+      <input type="hidden" name="front_html" value="{{ editor.front_html }}">
+    </div>
+    <div class="fl-field">
+      <label class="fl-label" data-back-label>Back</label>
+      <div class="editor-field" contenteditable="true" data-field="back" data-placeholder="Answer" spellcheck="true">{{ editor.back_html|safe }}</div>
+      <textarea class="fl-input editor-source" rows="6" hidden data-source-for="back" spellcheck="false" aria-label="Back HTML source"></textarea>
+      <input type="hidden" name="back_html" value="{{ editor.back_html }}">
+      <span class="fl-hint editor-typed-hint">During study you'll type this answer and see a diff.</span>
+    </div>
+  </div>
+  <p class="fl-hint editor-hint">Drop or paste images and audio straight into a field.
+    <span class="editor-cloze-only">Select an answer and press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd> to blank it.</span>
+    <span class="editor-reversed-only">Two cards: front&rarr;back and back&rarr;front.</span>
+    <kbd>Ctrl</kbd>+<kbd>Enter</kbd> saves.</p>
+  <p class="editor-status" data-editor-status hidden></p>
+</div>

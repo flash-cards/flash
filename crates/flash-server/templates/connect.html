@@ -1,0 +1,98 @@
+{% import "_public_head.html" as head %}
+<!doctype html>
+<html lang="en" data-theme="{{ theme }}">
+<head>
+{% call head::meta(
+  site,
+  "Connect your AI — Flash",
+  "Attach Flash to Claude, ChatGPT, Grok, or Claude Code in about a minute.",
+  "/connect",
+  "Attach Flash to Claude, ChatGPT, Grok, or Claude Code in about a minute."
+) %}{% endcall %}
+<script src="/static/ui.js?v=43" defer></script>
+{{ head_html|safe }}
+</head>
+<body>
+<div class="ld-page">
+
+<header class="ld-wrap ld-header">
+  <a class="ld-brand cn-brand-link" href="/">
+    <svg viewBox="0 0 64 64" fill="none" aria-hidden="true"><g transform="translate(32 32) scale(1.25) translate(-32 -32)"><g stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M47.5 27.9 51.8 26.7 M51.8 26.7 51.6 17.2 M51.8 26.7 56.3 35"></path><path d="M36.1 16.5 37.3 12.2 M37.3 12.2 29 7.7 M37.3 12.2 46.7 12.4"></path><path d="M20.7 20.7 17.5 17.5 M17.5 17.5 9.4 22.4 M17.5 17.5 22.4 9.4"></path><path d="M16.5 36.1 12.2 37.3 M12.2 37.3 12.4 46.7 M12.2 37.3 7.7 29"></path><path d="M27.9 47.5 26.7 51.8 M26.7 51.8 35 56.3 M26.7 51.8 17.2 51.6"></path><path d="M43.3 43.3 46.5 46.5 M46.5 46.5 54.6 41.6 M46.5 46.5 41.6 54.6"></path></g><path fill="currentColor" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" d="M49.4 27.3 Q38.7 25.3 36.7 14.6 Q29.5 22.8 19.3 19.3 Q22.8 29.5 14.6 36.7 Q25.3 38.7 27.3 49.4 Q34.5 41.2 44.7 44.7 Q41.2 34.5 49.4 27.3 Z"></path></g></svg>
+    <span class="ld-brand-name">Flash</span>
+  </a>
+  <div class="ld-header-actions">
+    {% if signed_in %}
+    <a class="fl-btn fl-btn-ghost" href="/">Back to Flash</a>
+    {% else %}
+    <a class="fl-btn fl-btn-ghost" href="/login">Log in</a>
+    {% endif %}
+  </div>
+</header>
+
+<main class="ld-wrap cn-main">
+  <section class="cn-hero">
+    <h1 class="cn-title">Connect your AI</h1>
+    <p class="ld-sub">One click below, then your AI walks you through the rest &mdash; about a minute. You'll sign in to Flash with your passkey along the way.</p>
+  </section>
+
+  <div class="cn-stack">
+    <div class="fl-card fl-card-pad cn-card">
+      <div>
+        <div class="cn-card-title">Claude</div>
+        <div class="cn-card-body">Opens a Claude chat that guides you click by click, then lists your decks to prove it worked.</div>
+      </div>
+      <div class="cn-card-actions">
+        <a class="fl-btn fl-btn-primary fl-btn-lg" target="_blank" rel="noopener" href="https://claude.ai/new?q={{ site.connect_prompt()|urlencode_strict }}">Set up with Claude</a>
+        <a class="cn-alt" href="claude://claude.ai/new?q={{ site.connect_prompt()|urlencode_strict }}">open in the desktop app instead</a>
+      </div>
+    </div>
+
+    <div class="fl-card fl-card-pad cn-card">
+      <div>
+        <div class="cn-card-title">ChatGPT</div>
+        <div class="cn-card-body">Same guided setup in a ChatGPT chat. Custom apps need a paid plan (Plus or higher) with Developer&nbsp;mode turned on.</div>
+      </div>
+      <div class="cn-card-actions">
+        <a class="fl-btn fl-btn-secondary fl-btn-lg" target="_blank" rel="noopener" href="https://chatgpt.com/?q={{ site.connect_prompt()|urlencode_strict }}">Set up with ChatGPT</a>
+      </div>
+    </div>
+
+    <div class="fl-card fl-card-pad cn-card">
+      <div>
+        <div class="cn-card-title">Grok</div>
+        <div class="cn-card-body">On grok.com, open <strong>Connectors &rarr; New Connector &rarr; Custom</strong>, paste the URL below, and sign in with your passkey. Works in Grok's voice mode too.</div>
+      </div>
+      <div class="token-box cn-token" id="grok-url">{{ site.mcp_url() }}</div>
+      <div><button type="button" class="fl-btn fl-btn-sm fl-btn-secondary" data-copy-target="grok-url">Copy URL</button></div>
+    </div>
+
+    <div class="fl-card fl-card-pad cn-card">
+      <div>
+        <div class="cn-card-title">Claude Code</div>
+        <div class="cn-card-body">Paste this in your terminal, then run <span class="cn-mono">/mcp</span> inside Claude Code to sign in.</div>
+      </div>
+      <div class="token-box cn-token" id="cc-cmd">claude mcp add --transport http flash {{ site.mcp_url() }}</div>
+      <div><button type="button" class="fl-btn fl-btn-sm fl-btn-secondary" data-copy-target="cc-cmd">Copy command</button></div>
+    </div>
+
+    <div class="cn-manual">
+      <p class="cn-card-body">Prefer to do it yourself? In Claude: Settings &rarr; Connectors &rarr; Add custom connector. In ChatGPT: Settings &rarr; Plugins &rarr; <strong>+</strong>. In Grok: Connectors &rarr; New Connector &rarr; Custom. Either way, paste:</p>
+      <div class="token-box cn-token" id="mcp-url">{{ site.mcp_url() }}</div>
+      <div><button type="button" class="fl-btn fl-btn-sm fl-btn-secondary" data-copy-target="mcp-url">Copy URL</button></div>
+    </div>
+  </div>
+</main>
+
+<footer class="ld-footer">
+  <div class="ld-wrap ld-footer-row">
+    <div class="ld-brand ld-brand-dim">
+      <svg viewBox="0 0 64 64" fill="none" aria-hidden="true"><g transform="translate(32 32) scale(1.25) translate(-32 -32)"><g stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M47.5 27.9 51.8 26.7 M51.8 26.7 51.6 17.2 M51.8 26.7 56.3 35"></path><path d="M36.1 16.5 37.3 12.2 M37.3 12.2 29 7.7 M37.3 12.2 46.7 12.4"></path><path d="M20.7 20.7 17.5 17.5 M17.5 17.5 9.4 22.4 M17.5 17.5 22.4 9.4"></path><path d="M16.5 36.1 12.2 37.3 M12.2 37.3 12.4 46.7 M12.2 37.3 7.7 29"></path><path d="M27.9 47.5 26.7 51.8 M26.7 51.8 35 56.3 M26.7 51.8 17.2 51.6"></path><path d="M43.3 43.3 46.5 46.5 M46.5 46.5 54.6 41.6 M46.5 46.5 41.6 54.6"></path></g><path fill="currentColor" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" d="M49.4 27.3 Q38.7 25.3 36.7 14.6 Q29.5 22.8 19.3 19.3 Q22.8 29.5 14.6 36.7 Q25.3 38.7 27.3 49.4 Q34.5 41.2 44.7 44.7 Q41.2 34.5 49.4 27.3 Z"></path></g></svg>
+      <span class="ld-footer-name">Flash</span>
+    </div>
+    <div class="ld-mono-dim">{{ site.host() }} &middot; free</div>
+  </div>
+</footer>
+
+</div>
+</body>
+</html>

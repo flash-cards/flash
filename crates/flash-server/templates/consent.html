@@ -1,0 +1,20 @@
+{% extends "auth_base.html" %}
+{% block title %}Authorize — Flash{% endblock %}
+{% block content %}
+<h1>Authorize access</h1>
+<div class="fl-card fl-card-pad" style="text-align:left;display:flex;flex-direction:column;gap:12px">
+  <p><strong>{{ client_name }}</strong> wants to access your flashcards:
+  study sessions, card contents, and the ability to create and edit cards.</p>
+  <p>If you approve, the sign-in will be sent to <strong>{{ redirect_host }}</strong>.
+  The name above is chosen by whoever registered the app; the address is where
+  your access actually goes.</p>
+  <p class="fl-hint">Only approve if you started this yourself from an app you
+  trust (like adding a connector in Claude, ChatGPT, or Grok) and the address
+  is that app's.</p>
+  <form method="post" action="/oauth/consent" style="display:flex;gap:10px">
+    <input type="hidden" name="token" value="{{ token }}">
+    <button class="fl-btn fl-btn-primary" type="submit" name="decision" value="approve" style="width:auto;flex:1">Approve</button>
+    <button class="fl-btn fl-btn-secondary" type="submit" name="decision" value="deny" style="width:auto;flex:1">Deny</button>
+  </form>
+</div>
+{% endblock %}

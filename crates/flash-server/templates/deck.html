@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ deck_name }} — Flash{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ deck_name }}</h1>
+  <div class="row">
+    <a class="fl-btn fl-btn-secondary" href="/decks/{{ deck_id }}/settings">Settings</a>
+    <a class="fl-btn fl-btn-primary" href="/study?deck={{ deck_id }}">Study this deck</a>
+  </div>
+</div>
+
+<div id="deck-main" style="display:contents">
+<section>
+<h2>Add a card</h2>
+{{ usage_banner|safe }}
+{% if let Some(msg) = editor_error %}
+<div class="fl-card fl-card-pad" style="border-color:var(--bad)" role="alert">
+  <strong>{{ msg }}</strong>
+</div>
+{% endif %}
+<form class="fl-card fl-card-pad" method="post" action="/decks/{{ deck_id }}/cards" hx-boost="true" hx-push-url="false" hx-select="#deck-main" hx-target="#deck-main" hx-swap="outerHTML show:none" style="display:flex;flex-direction:column;gap:14px"
+      data-editor-form data-basic-action="/decks/{{ deck_id }}/cards" data-notes-action="/decks/{{ deck_id }}/notes">
+  <div class="field-cols" data-quick-fields>
+    <div class="fl-field"><label class="fl-label" for="card-front">Front</label><textarea class="fl-input" id="card-front" name="front" rows="2" required></textarea></div>
+    <div class="fl-field"><label class="fl-label" for="card-back">Back</label><textarea class="fl-input" id="card-back" name="back" rows="2" required></textarea></div>
+  </div>
+  <div class="editor-advanced" hidden>
+    {% include "card_editor_body.html" %}
+  </div>
+  <div class="fl-field">
+    <label class="fl-label" for="card-tags">Tags</label>
+    <input class="fl-input" type="text" id="card-tags" name="tags" placeholder="exam-2, cardiac">
+    <span class="fl-hint">Comma-separated, optional.</span>
+  </div>
+  <div class="row">
+    <button class="fl-btn fl-btn-secondary" type="submit">Add card</button>
+    <button class="fl-btn fl-btn-ghost" type="button" data-editor-toggle aria-expanded="false" hidden>Advanced</button>
+  </div>
+</form>
+</section>
+
+<section>
+<h2>Cards</h2>
+<input class="fl-input" type="search" name="q" placeholder="Search this deck&hellip;" value="{{ q }}"
+       hx-get="/decks/{{ deck_id }}/cards" hx-trigger="input changed delay:300ms" hx-target="#cards">
+<div id="cards">
+  {% include "card_rows.html" %}
+</div>
+</section>
+</div>
+
+<div id="editor-dialog"></div>
+{# bump ?v= together with base.html when static files change #}
+<script src="/static/editor.js?v=40" defer></script>
+{% endblock %}

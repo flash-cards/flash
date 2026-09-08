@@ -1,0 +1,25 @@
+{% extends "auth_base.html" %}
+{% block title %}Sign in — Flash{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block scripts %}<script src="/static/webauthn.js?v=35" defer></script>{% endblock %}
+{% block content %}
+<p class="muted">Flashcards that schedule themselves.</p>
+{% if let Some(msg) = notice %}<p class="fl-hint" style="margin-bottom:12px">{{ msg }}</p>{% endif %}
+<div class="fl-card fl-card-pad" style="display:flex;flex-direction:column;gap:12px">
+{{ providers_html|safe }}
+  <button class="fl-btn fl-btn-primary" id="login-btn" data-next="{{ next }}">Sign in with passkey</button>
+  <p id="error" class="error"></p>
+  <p class="fl-hint" style="text-align:center">or with your password</p>
+  <form method="post" action="/auth/login/password" style="display:flex;flex-direction:column;gap:10px">
+    <input type="hidden" name="next" value="{{ next }}">
+    <input class="fl-input" type="email" name="email" value="{{ email }}" required maxlength="254" autocomplete="email" placeholder="you@example.com">
+    <input class="fl-input" type="password" name="password" required maxlength="512" autocomplete="current-password" placeholder="Password">
+    <button class="fl-btn fl-btn-secondary" type="submit">Sign in</button>
+    {% if let Some(msg) = error %}<p class="error">{{ msg }}</p>{% endif %}
+  </form>
+</div>
+<p class="muted" style="margin-top:12px"><a href="/reset">Forgot password?</a></p>
+{% if let Some(path) = signup_path %}
+<p class="muted">New here? <a href="{{ path }}">Create an account</a></p>
+{% endif %}
+{% endblock %}

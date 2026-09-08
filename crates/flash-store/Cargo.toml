@@ -1,0 +1,41 @@
+[package]
+name = "flash-store"
+version.workspace = true
+edition.workspace = true
+license = "AGPL-3.0-only"
+publish.workspace = true
+repository.workspace = true
+description = "Flash's SQLite persistence: migrations, decks, cards, reviews, media, Anki import/export"
+
+[lints]
+workspace = true
+
+[features]
+# Exposes the importer's private decoders (`import::fuzz`) to the fuzz
+# workspace, which cannot reach them through the zip, zstd and SQLite
+# layers a raw-bytes fuzzer never synthesizes. Never on in a build that
+# ships.
+fuzzing = []
+
+[dependencies]
+ammonia = "4.1.4"
+csv = "1.4.0"
+rusqlite = { version = "0.40.2", features = ["bundled", "hooks"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+sha1_smol = "1.0"
+flash-core = { version = "0.1.0", path = "../flash-core" }
+# The connection mutex. parking_lot has no poisoned state: a panic while
+# the guard is held (the transaction rolls back as it drops) leaves the
+# next caller a working lock instead of a permanently panicking one.
+parking_lot = "0.12"
+thiserror = "2.0.20"
+zip = "8.6.0"
+zstd = "0.13.3"
+
+[dev-dependencies]
+flash-scan = { path = "../flash-scan" }
+rusqlite = { version = "0.40.2", features = ["bundled", "hooks"] }
+sha1_smol = "1.0"
+zip = "8.6.0"
+zstd = "0.13.3"

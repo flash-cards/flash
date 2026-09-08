@@ -1,0 +1,22 @@
+{# Edit dialog for one card: an htmx partial swapped into #editor-dialog.
+   Saving posts back here; success answers 204 + HX-Refresh, a refusal
+   re-renders this dialog with `error`. #}
+<div class="fl-dialog-overlay" data-editor-overlay>
+  <form class="fl-dialog editor-dialog" hx-post="/cards/{{ editor.card_id }}/edit" hx-target="#editor-dialog" hx-swap="innerHTML" data-editor-form>
+    <div class="editor-dialog-head">
+      <h2 style="margin:0">Edit card</h2>
+      <button type="button" class="fl-btn fl-btn-sm fl-iconbtn fl-btn-ghost" aria-label="Close" data-editor-close><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    </div>
+    {% if let Some(msg) = error %}<div class="editor-error" role="alert">{{ msg }}</div>{% endif %}
+    {% include "card_editor_body.html" %}
+    <div class="fl-field">
+      <label class="fl-label" for="edit-tags-{{ editor.card_id }}">Tags</label>
+      <input class="fl-input" type="text" id="edit-tags-{{ editor.card_id }}" name="tags" value="{{ editor.tags }}" placeholder="exam-2, cardiac">
+      <span class="fl-hint">Comma-separated, applied to every card of this note.</span>
+    </div>
+    <div class="row" style="justify-content:flex-end">
+      <button type="button" class="fl-btn fl-btn-secondary" data-editor-close>Cancel</button>
+      <button class="fl-btn fl-btn-primary" type="submit">Save</button>
+    </div>
+  </form>
+</div>

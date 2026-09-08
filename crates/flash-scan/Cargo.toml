@@ -1,0 +1,19 @@
+[package]
+name = "flash-scan"
+version.workspace = true
+edition.workspace = true
+license = "AGPL-3.0-only"
+publish.workspace = true
+repository.workspace = true
+description = "Flash's source model for its structural tests: the workspace's Rust parsed with syn, queried by the guarantees that hold by construction"
+
+[lints]
+workspace = true
+
+[dependencies]
+# Real line numbers on every token: `span-locations` makes `Span::start()`
+# answer outside a proc-macro context.
+proc-macro2 = { version = "1.0.107", features = ["span-locations"] }
+# `ToTokens`, so a syn node can be printed back as tokens and compacted.
+quote = "1.0.47"
+syn = { version = "2.0.119", features = ["full", "visit", "visit-mut", "printing"] }

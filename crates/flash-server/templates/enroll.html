@@ -1,0 +1,35 @@
+{% extends "auth_base.html" %}
+{% block title %}Welcome — Flash{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block scripts %}<script src="/static/webauthn.js?v=35" defer></script>{% endblock %}
+{% block content %}
+<h1>Welcome, {{ display_name }}</h1>
+{% if email.is_some() %}
+<p class="muted">Email verified. Now set up a passkey to start studying. Face ID, fingerprint, or your device PIN — no password.</p>
+{% else %}
+<p class="muted">Set up a passkey to start studying. Face ID, fingerprint, or your device PIN — no password.</p>
+{% endif %}
+<div class="fl-card fl-card-pad" style="display:flex;flex-direction:column;gap:12px">
+  <div>
+    <label class="fl-label" for="email">Email</label>
+    {# name+form: the same input also submits with the password form below #}
+    {% if let Some(addr) = email %}
+    <input class="fl-input" type="email" id="email" name="email" form="pw-form" value="{{ addr }}" readonly style="margin-top:6px">
+    {% else %}
+    <input class="fl-input" type="email" id="email" name="email" form="pw-form" required maxlength="254" autocomplete="email" placeholder="you@example.com" style="margin-top:6px">
+    {% endif %}
+  </div>
+  <button class="fl-btn fl-btn-primary" id="enroll-btn" data-token="{{ token }}" data-next="{{ next }}">Create my passkey</button>
+  <p id="error" class="error"></p>
+  <details style="text-align:left">
+    <summary class="fl-hint" style="cursor:pointer">Use a password instead</summary>
+    <form id="pw-form" method="post" action="/auth/enroll/{{ token }}/password" style="display:flex;flex-direction:column;gap:10px;margin-top:10px">
+      <input type="hidden" name="next" value="{{ next }}">
+      <input class="fl-input" type="password" name="password" required minlength="8" maxlength="512" autocomplete="new-password" placeholder="Password (8+ characters)">
+      <input class="fl-input" type="password" name="confirm" required minlength="8" maxlength="512" autocomplete="new-password" placeholder="Confirm password">
+      <button class="fl-btn fl-btn-secondary" type="submit">Create account with password</button>
+    </form>
+  </details>
+  {% if let Some(msg) = error %}<p class="error">{{ msg }}</p>{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,102 @@
+# Build + test the Rust workspace on every push and pull request.
+#
+#   build-test  (required)  cargo build + cargo test for the whole workspace
+#   lint        (required)  rustfmt --check + clippy -D warnings
+#
+# This file is what the public repository runs; a downstream tree may
+# carry more workflows beside it.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0      # incremental artifacts don't help on a fresh VM
+  # Full debuginfo for every test binary of a workspace this size fills
+  # the runner's 14 GB root disk, and the linker then dies with a bus
+  # error. Line tables keep panic locations readable at a fraction of it.
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free disk (preinstalled toolchains this job never uses)
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+          df -h / | tail -1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2 (caches ~/.cargo + target/ between runs)
+      - name: Build
+        run: cargo build --workspace --all-targets --locked
+      - name: Test
+        run: cargo test --workspace --locked
+      - name: Disk after
+        if: always()
+        run: df -h / | tail -1
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: rustfmt
+        run: cargo fmt --all --check
+      - name: clippy
+        if: always()
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      # Advisories, licences and sources against deny.toml. cargo-audit
+      # also runs daily; this one fails the push that introduces a
+      # problem.
+      - name: cargo deny
+        if: always()
+        uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
+        with:
+          command: check
+          rust-version: stable
+
+  # A short libFuzzer pass over the parsers that take user files and card
+  # HTML (fuzz/). Thirty seconds a target catches the regressions that
+  # crash on the first thousand mutations; the corpus for longer runs
+  # lives with whoever runs them.
+  fuzz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # nightly
+        with:
+          toolchain: nightly
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: fuzz
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked
+      # Each target starts from its checked-in seeds (fuzz/seeds/<target>)
+      # where it has any: a raw-bytes fuzzer never synthesizes a zip
+      # around a SQLite file around a protobuf manifest on its own, so
+      # without seeds the package targets would fuzz the zip header and
+      # nothing behind it. A missing seed directory fails the job.
+      - name: Fuzz each target briefly
+        working-directory: fuzz
+        run: |
+          set -euo pipefail
+          test -s seeds/apkg/modern.apkg
+          for target in apkg apkg_parts proto csv richtext media notes; do
+            corpus=""
+            if [ -d "seeds/$target" ]; then corpus="seeds/$target"; fi
+            cargo fuzz run "$target" $corpus -- -max_total_time=30 -max_len=65536
+          done

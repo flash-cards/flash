@@ -1,0 +1,51 @@
+[workspace]
+resolver = "2"
+# Every crate under crates/: the open core (flash-core, flash-store,
+# flash-server) and any downstream extension checked out beside it. A
+# tree with only the open crates uses this manifest unchanged.
+members = ["crates/*"]
+# The fuzz targets are a nightly-only workspace of their own (fuzz/).
+exclude = ["fuzz"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+publish = false
+repository = "https://github.com/flash-cards/flash"
+
+# Shared lint policy; every crate opts in with `[lints] workspace = true`.
+[workspace.lints.clippy]
+# Handlers and their helpers return `Result<T, axum::response::Response>`
+# so an early exit is already a finished HTTP response. A Response is a
+# few hundred bytes; boxing it at every fallible call would cost more in
+# noise than the copy costs in time on a request path that touches
+# SQLite. Clippy 1.98 started flagging this shape.
+result_large_err = "allow"
+
+# Fully optimized release builds: what a tagged release and the Docker
+# image are built with.
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+# Unwinding, deliberately: a panic in one request's task is caught by the
+# runtime and costs that one connection. With `abort` it costs every
+# connection and a restart, which turns any reachable panic into a denial
+# of service. The binary is a little larger for it.
+panic = "unwind"
+strip = true
+# Integer overflow on untrusted arithmetic is a panic (one failed
+# request, see above) rather than a silently wrong number. The cost is
+# a few cycles on an SQLite-bound server; the alternative is a length
+# that wrapped past a bounds check.
+overflow-checks = true
+
+# For frequent deploys of your own: thin LTO across 16 codegen units links
+# in a fraction of the time fat/1 takes (that setting re-optimizes the
+# whole program on one thread every build) with no measurable difference
+# for an SQLite-bound server. `release` keeps the maximal settings.
+[profile.deploy]
+inherits = "release"
+lto = "thin"
+codegen-units = 16
+incremental = true

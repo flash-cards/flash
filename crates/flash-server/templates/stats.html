@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Stats — Flash{% endblock %}
+{% block content %}
+<h1>Stats</h1>
+<div class="stat-grid">
+  <div class="fl-card fl-card-pad fl-stat"><span class="fl-stat-value">{{ reviews_30d }}</span><span class="fl-stat-label">reviews, last 30 days</span></div>
+  <div class="fl-card fl-card-pad fl-stat"><span class="fl-stat-value">{{ retention }}</span><span class="fl-stat-label">retention, last 30 days</span></div>
+  <div class="fl-card fl-card-pad fl-stat"><span class="fl-stat-value">{{ total_reviews }}</span><span class="fl-stat-label">reviews, all time</span></div>
+  <div class="fl-card fl-card-pad fl-stat"><span class="fl-stat-value">{{ streak }}</span><span class="fl-stat-label">day streak</span></div>
+  <div class="fl-card fl-card-pad fl-stat"><span class="fl-stat-value">{{ longest_streak }}</span><span class="fl-stat-label">longest streak</span></div>
+  <div class="fl-card fl-card-pad fl-stat"><span class="fl-stat-value">{{ mature_cards }}<span class="fl-stat-sub">/ {{ active_cards }}</span></span><span class="fl-stat-label">mature cards (of active)</span></div>
+</div>
+
+<section>
+<h2>Past year</h2>
+<div class="fl-card" style="padding:20px">
+  <div class="hm-scroll">
+    <div class="hm-months">
+      {%- for m in heat_months -%}
+      <span style="width:{{ m.weeks * 13 }}px">{{ m.label }}</span>
+      {%- endfor -%}
+    </div>
+    <div class="hm-grid">
+      {%- for week in heat_weeks -%}
+      {%- for cell in week -%}
+      <div class="hm-cell" data-level="{{ cell.level }}"{% if cell.future %} data-future="true"{% endif %}{% if cell.today %} data-today="true"{% endif %} title="{{ cell.label }}: {{ cell.count }} {% if cell.future %}due{% else %}reviews{% endif %}"></div>
+      {%- endfor -%}
+      {%- endfor -%}
+    </div>
+  </div>
+  <p class="hm-legend">Daily average: <span>{{ daily_avg }} reviews</span> &middot; Days learned: <span>{{ days_learned_pct }}%</span> &middot; Longest streak: <span>{{ longest_streak }} days</span> &middot; Current streak: <span>{{ streak }} days</span></p>
+</div>
+</section>
+
+<section>
+<h2>Reviews per day</h2>
+<div class="fl-card" style="padding:20px 20px 12px">
+  <div class="fl-bars stats-bars">
+    {% for day in days %}
+    <div class="fl-bar" {% if loop.last %}data-hot="true"{% endif %} style="height:{{ day.pct }}%"
+         title="{{ day.label }}: {{ day.count }}"></div>
+    {% endfor %}
+  </div>
+</div>
+</section>
+
+<section>
+<h2>Coming up</h2>
+<table class="fl-table">
+  <thead><tr><th>Day</th><th>Cards due</th></tr></thead>
+  <tbody>
+  {% for day in upcoming %}
+  <tr><td>{{ day.label }}</td><td class="num">{{ day.count }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</section>
+{% endblock %}

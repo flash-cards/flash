@@ -1,0 +1,8 @@
+/target
+/fuzz/target
+/fuzz/artifacts
+/fuzz/corpus
+*.db
+*.db-wal
+*.db-shm
+.env

@@ -1,0 +1,17 @@
+[package]
+name = "flash-core"
+version.workspace = true
+edition.workspace = true
+license = "AGPL-3.0-only"
+publish.workspace = true
+repository.workspace = true
+description = "Flash's pure domain: the FSRS scheduler wrapper, queue policy and types"
+
+[lints]
+workspace = true
+
+[dependencies]
+fsrs = "6.6.1"
+
+[dev-dependencies]
+serde_json = "1.0.151"

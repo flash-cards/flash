@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Study — Flash{% endblock %}
+{% block content %}
+<h1>Study</h1>
+<div id="study" class="study-col">
+  {% include "study_card.html" %}
+</div>
+{# bump ?v= together with base.html and auth_base.html when static files change #}
+<script src="/static/study.js?v=38" defer></script>
+{% endblock %}

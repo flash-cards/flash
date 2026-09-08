@@ -1,0 +1,6 @@
+# The image builds from the Cargo workspace and nothing else.
+*
+!Cargo.toml
+!Cargo.lock
+!crates/
+crates/**/target/

@@ -1,0 +1,19 @@
+{% extends "auth_base.html" %}
+{% block title %}New password — Flash{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+<h1>Set a new password</h1>
+<p class="muted">This signs you out everywhere else.</p>
+<form class="fl-card fl-card-pad" method="post" action="/auth/reset/{{ token }}" style="display:flex;flex-direction:column;gap:12px">
+  <div class="fl-field">
+    <label class="fl-label" for="new-password">New password</label>
+    <input class="fl-input" type="password" id="new-password" name="password" required minlength="8" maxlength="512" autocomplete="new-password">
+  </div>
+  <div class="fl-field">
+    <label class="fl-label" for="confirm-password">Confirm</label>
+    <input class="fl-input" type="password" id="confirm-password" name="confirm" required minlength="8" maxlength="512" autocomplete="new-password">
+  </div>
+  <button class="fl-btn fl-btn-primary" type="submit">Save password</button>
+  {% if let Some(msg) = error %}<p class="error">{{ msg }}</p>{% endif %}
+</form>
+{% endblock %}

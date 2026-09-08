@@ -1,0 +1,79 @@
+[package]
+name = "flash-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+# `fuzzing` opens the importer's private decoders (`import::fuzz`) so the
+# protobuf and manifest parsers are fuzzed directly, not only through the
+# zip/zstd/SQLite layers a raw-bytes fuzzer never synthesizes.
+flash-store = { path = "../crates/flash-store", features = ["fuzzing"] }
+# For the structure-aware target, which builds the container around the
+# fuzzed bytes.
+zip = "8.6.0"
+zstd = "0.13.3"
+
+# Its own workspace: nightly-only, never part of `cargo test --workspace`.
+[workspace]
+
+[profile.release]
+debug = 1
+
+# Raw-bytes targets. `apkg` needs the seed corpus in seeds/apkg to get
+# past the zip header; ci.yml passes it.
+[[bin]]
+name = "apkg"
+path = "fuzz_targets/apkg.rs"
+test = false
+doc = false
+bench = false
+
+# Structure-aware: the fuzzed bytes are the manifest and the collection,
+# the harness supplies the zip, the zstd frames and the `meta` entry.
+[[bin]]
+name = "apkg_parts"
+path = "fuzz_targets/apkg_parts.rs"
+test = false
+doc = false
+bench = false
+
+# The protobuf and manifest decoders on their own.
+[[bin]]
+name = "proto"
+path = "fuzz_targets/proto.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "csv"
+path = "fuzz_targets/csv.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "richtext"
+path = "fuzz_targets/richtext.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "media"
+path = "fuzz_targets/media.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "notes"
+path = "fuzz_targets/notes.rs"
+test = false
+doc = false
+bench = false

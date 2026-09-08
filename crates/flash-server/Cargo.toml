@@ -1,0 +1,70 @@
+[package]
+name = "flash-server"
+version.workspace = true
+edition.workspace = true
+license = "AGPL-3.0-only"
+publish.workspace = true
+repository.workspace = true
+description = "Flash: a self-hosted spaced-repetition server you study with your AI over MCP"
+
+[lints]
+workspace = true
+
+[features]
+# The integration-test harness (`flash_server::testing`): builds the app
+# the way production does with fakes swapped in. On for this crate's own
+# tests and for a downstream crate's.
+test-support = ["dep:tower", "dep:flash-scan"]
+
+[dependencies]
+argon2 = { version = "0.6.0-rc.8", features = ["password-hash"] }
+askama = "0.16.0"
+axum = { version = "0.8.9", features = ["multipart"] }
+axum-extra = { version = "0.12.6", features = ["cookie"] }
+base64 = "0.23.1"
+hmac = "0.13.0"
+http = "1.5.0"
+jiff = "0.2.35"
+openssl = { version = "0.10.81", features = ["vendored"] }
+# Every in-process lock. parking_lot has no poisoned state, so a panic
+# while a guard is held costs that request and nothing after it.
+parking_lot = "0.12"
+rand = "0.10.2"
+rmcp = { version = "3.1.4", features = ["server", "transport-streamable-http-server"] }
+schemars = "1.2.2"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+sha2 = "0.11.0"
+flash-core = { path = "../flash-core" }
+flash-store = { version = "0.1.0", path = "../flash-store" }
+thiserror = "2.0.20"
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "net", "fs"] }
+# `ReaderStream`: an export is built on disk and streamed from the file.
+tokio-util = { version = "0.7", features = ["io"] }
+tower = { version = "0.5.3", optional = true }
+# The source model the harness's route inventory is read from.
+flash-scan = { path = "../flash-scan", optional = true }
+# `timeout`: no request lives forever. `catch-panic`: a panic anywhere
+# in a request is a logged 500, never a dropped connection.
+tower-http = { version = "0.7", features = ["timeout", "catch-panic"] }
+tracing = "0.1.44"
+# Redirect URIs are parsed, not prefix-matched (already linked via
+# webauthn-rs).
+url = "2"
+tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "ansi"] }
+# native-tls reuses the vendored OpenSSL already linked via webauthn-rs, so
+# a static musl build gains no second TLS stack.
+ureq = { version = "3", default-features = false, features = ["native-tls", "json"] }
+webauthn-rs = "0.5.5"
+
+[dev-dependencies]
+# The crate's own tests use the harness through the feature.
+flash-server = { path = ".", features = ["test-support"] }
+flash-scan = { path = "../flash-scan" }
+rusqlite = { version = "0.40.2", features = ["bundled"] }
+base64 = "0.23.1"
+hmac = "0.13.0"
+sha2 = "0.11.0"
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros"] }
+tower = "0.5.3"
+zip = "8.6.0"

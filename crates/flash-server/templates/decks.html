@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Decks — Flash{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Decks</h1>
+  <a class="small muted" href="/import">Import</a>
+</div>
+{{ usage_banner|safe }}
+{{ usage_count|safe }}
+<form class="row" method="post" action="/decks">
+  <input class="fl-input" type="text" name="name" placeholder="New deck name" required maxlength="120">
+  <button class="fl-btn fl-btn-primary" type="submit">Create</button>
+</form>
+
+{% if decks.is_empty() %}
+<p class="muted">No decks yet.</p>
+{% else %}
+<table class="fl-table">
+  <thead><tr><th>Deck</th><th>Due</th><th>New</th><th></th></tr></thead>
+  <tbody>
+  {% for deck in decks %}
+  <tr>
+    <td><a href="/decks/{{ deck.id }}">{{ deck.name }}</a></td>
+    <td class="num">{{ deck.due_count }}</td>
+    <td class="num">{{ deck.new_count }}</td>
+    <td style="text-align:right"><a class="small muted" href="/study?deck={{ deck.id }}">study</a></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

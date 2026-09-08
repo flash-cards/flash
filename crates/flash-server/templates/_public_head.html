@@ -1,0 +1,32 @@
+{#
+  The <head> every signed-out public page shares. Pages pass their own
+  copy as literals — these are authored strings, hence |safe — and add
+  page-specific <script>/JSON-LD after the call:
+
+    {% import "_public_head.html" as head %}
+    ...
+    <head>
+    {% call head::meta(site, "Title", "Meta description", "/path", "OG description") %}{% endcall %}
+    <script src="..." defer></script>
+    </head>
+
+  `site` is the page's `Site` (the deployment's public origin); `path` is
+  the canonical path under it ("/" for the front page). Asset
+  cache-busters live here once, not per page.
+#}
+{% macro meta(site, title, description, path, og_description) %}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title|safe }}</title>
+<meta name="description" content="{{ description|safe }}">
+<link rel="canonical" href="{{ site.base_url }}{{ path|safe }}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Flash">
+<meta property="og:title" content="{{ title|safe }}">
+<meta property="og:description" content="{{ og_description|safe }}">
+<meta property="og:url" content="{{ site.base_url }}{{ path|safe }}">
+<meta property="og:image" content="{{ site.base_url }}/static/og.png?v=2">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="/static/favicon.svg?v=39" type="image/svg+xml">
+<link rel="stylesheet" href="/static/app.css?v=50">
+{% endmacro %}

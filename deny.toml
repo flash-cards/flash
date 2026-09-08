@@ -1,0 +1,55 @@
+# cargo-deny policy: known-vulnerable or unmaintained dependencies fail
+# the build, every licence in the tree is one we accept, and crates come
+# only from crates.io. Run locally with `cargo deny check`.
+
+[graph]
+all-features = true
+
+[advisories]
+version = 2
+db-path = "~/.cargo/advisory-db"
+db-urls = ["https://github.com/rustsec/advisory-db"]
+yanked = "deny"
+# Advisories with no fix yet go here with the id and a reason, never
+# silently.
+ignore = []
+
+[licenses]
+version = 2
+# The set actually present in the tree. Adding a dependency under another
+# licence is a deliberate act: extend this list in the same change.
+allow = [
+    "0BSD",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "CC0-1.0",
+    "CDLA-Permissive-2.0",
+    "MIT",
+    "MIT-0",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+    "bzip2-1.0.6",
+]
+confidence-threshold = 0.8
+# The workspace crates are never published; the hosted extension carries
+# its own licence file rather than an SPDX id.
+private = { ignore = true }
+
+[bans]
+multiple-versions = "allow"
+# No `*` version requirements; the workspace's own path dependencies
+# carry none and are fine.
+wildcards = "deny"
+allow-wildcard-paths = true
+# Crates that must not enter the tree go here with the reason.
+deny = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

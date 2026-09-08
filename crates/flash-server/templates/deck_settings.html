@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ deck_name }} settings — Flash{% endblock %}
+{% block content %}
+<div id="deck-settings" style="display:contents">
+<div class="page-head">
+  <div>
+    <h1>{{ deck_name }}</h1>
+    <span class="fl-hint">Deck settings</span>
+  </div>
+  <a class="fl-btn fl-btn-secondary" href="/decks/{{ deck_id }}">&larr; Back to deck</a>
+</div>
+
+<form class="fl-card fl-card-pad" id="rename-card" method="post" action="/decks/{{ deck_id }}/rename" hx-boost="true" hx-push-url="false" hx-select="#deck-settings" hx-target="#deck-settings" hx-swap="outerHTML show:none" style="display:flex;flex-direction:column;gap:12px">
+  <div class="row">
+    <h3>Name</h3>
+    {% if let Some(e) = name_error %}<span class="fl-badge fl-badge-warn">{{ e }}</span>{% endif %}
+  </div>
+  <input class="fl-input" type="text" id="deck-name" name="name" aria-label="Deck name" value="{{ deck_name }}" required maxlength="200" autocomplete="off">
+  <div class="row"><button class="fl-btn fl-btn-secondary" type="submit">Rename</button>{% if saved == "name" %}<span class="save-note fl-badge-toast" role="status">Saved</span>{% endif %}</div>
+</form>
+
+<div class="fl-card fl-card-pad" id="limits-card" style="display:flex;flex-direction:column;gap:14px">
+  <h3>Daily limits</h3>
+  <form method="post" action="/decks/{{ deck_id }}/limits" hx-boost="true" hx-push-url="false" hx-select="#limits-card" hx-target="#limits-card" hx-swap="outerHTML show:none" style="display:flex;flex-direction:column;gap:14px">
+    <div class="field-cols">
+      <div class="fl-field"><label class="fl-label" for="lim-new">New cards / day</label>
+        <input class="fl-input" type="number" id="lim-new" name="new_per_day" min="0" max="9999"
+               placeholder="account default ({{ limits.default_new }})"
+               {% if let Some(n) = limits.new_override %}value="{{ n }}"{% endif %}></div>
+      <div class="fl-field"><label class="fl-label" for="lim-rev">Max reviews / day</label>
+        <input class="fl-input" type="number" id="lim-rev" name="reviews_per_day" min="0" max="99999"
+               placeholder="account default ({{ limits.default_reviews }})"
+               {% if let Some(n) = limits.reviews_override %}value="{{ n }}"{% endif %}></div>
+    </div>
+    <div class="row"><button class="fl-btn fl-btn-secondary" type="submit">Save limits</button>{% if saved == "limits" %}<span class="save-note fl-badge-toast" role="status">Saved</span>{% endif %}</div>
+  </form>
+  <form class="row" method="post" action="/decks/{{ deck_id }}/boost" hx-boost="true" hx-push-url="false" hx-select="#limits-card" hx-target="#limits-card" hx-swap="outerHTML show:none" style="border-top:1px solid var(--stroke);padding-top:14px">
+    <span class="fl-hint">More new cards today:</span>
+    <button class="fl-btn fl-btn-sm fl-btn-secondary" type="submit" name="extra" value="5">+5</button>
+    <button class="fl-btn fl-btn-sm fl-btn-secondary" type="submit" name="extra" value="10">+10</button>
+    <button class="fl-btn fl-btn-sm fl-btn-secondary" type="submit" name="extra" value="20">+20</button>
+    {% if limits.boost_today > 0 %}<span class="fl-badge fl-badge-good"><span class="fl-badge-dot"></span>+{{ limits.boost_today }} today</span>{% endif %}
+  </form>
+</div>
+
+{{ sharing_html|safe }}
+
+<div class="fl-card fl-card-pad" style="display:flex;flex-direction:column;gap:12px">
+  <h3>Delete deck</h3>
+  <p class="fl-hint">Removes this deck and every card in it. Review history is kept. This can't be undone.</p>
+  <div><button class="fl-btn fl-btn-sm fl-btn-danger" type="button"
+          hx-post="/decks/{{ deck_id }}/delete" hx-disabled-elt="this"
+          hx-confirm="Delete this deck and all its cards? This can't be undone.">Delete deck</button></div>
+</div>
+</div>
+{% endblock %}

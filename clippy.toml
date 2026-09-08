@@ -1,0 +1,7 @@
+# Type-resolved bans, alias- and glob-import-proof, enforced by the
+# workspace clippy run (`-D warnings` in CI). The lock_hygiene scan is
+# the belt; this is the braces.
+disallowed-types = [
+    { path = "std::sync::Mutex", reason = "a poisoned lock is a permanent outage; use parking_lot::Mutex (see lock_hygiene_tests)" },
+    { path = "std::sync::RwLock", reason = "a poisoned lock is a permanent outage; use parking_lot::RwLock (see lock_hygiene_tests)" },
+]

@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}Settings — Flash{% endblock %}
+{% block content %}
+<h1>Settings</h1>
+
+<div class="fl-card fl-card-pad" id="name-card" style="display:flex;flex-direction:column;gap:12px">
+  <div class="row">
+    <h3>Name</h3>
+    {% if name_error %}<span class="fl-badge fl-badge-warn">a name is required (up to 80 characters)</span>{% endif %}
+  </div>
+  <p class="fl-hint" style="margin-top:-6px">What Flash and your AI call you.</p>
+  <form class="row" method="post" action="/settings/name" hx-boost="true" hx-push-url="false" hx-select="#name-card" hx-target="#name-card" hx-swap="outerHTML show:none">
+    <input class="fl-input" type="text" name="display_name" value="{{ display_name }}" required maxlength="80" autocomplete="nickname" style="max-width:260px">
+    <button class="fl-btn fl-btn-sm fl-btn-secondary" type="submit">Save</button>
+    {% if name_saved %}<span class="save-note fl-badge-toast" role="status">Saved</span>{% endif %}
+  </form>
+</div>
+
+{% if plan_html.is_empty() %}
+<div class="fl-card fl-card-pad" style="display:flex;flex-direction:column;gap:12px">
+  <h3>Your cards</h3>
+  <p class="fl-hint">{{ card_count }} cards.</p>
+  <p class="fl-hint">Your cards are always yours — export is never blocked:
+    <a href="/export.apkg">Anki .apkg</a> · <a href="/export.csv">CSV</a></p>
+</div>
+{% else %}
+{{ plan_html|safe }}
+{% endif %}
+
+<div class="fl-card fl-card-pad" id="scheduling-card" style="display:flex;flex-direction:column;gap:14px">
+  <div>
+    <h3>Daily limits</h3>
+    <p class="fl-hint" style="margin-top:4px">Account defaults. Any deck can override them on its own page.</p>
+  </div>
+  <form method="post" action="/settings/scheduling" hx-boost="true" hx-push-url="false" hx-select="#scheduling-card" hx-target="#scheduling-card" hx-swap="outerHTML show:none" style="display:flex;flex-direction:column;gap:10px;align-items:flex-start">
+    <div class="row">
+      <label class="fl-field" style="gap:4px"><span class="fl-label">New cards / day</span>
+        <input class="fl-input" type="number" name="new_per_day" value="{{ new_per_day }}" min="0" max="9999" required style="width:120px"></label>
+      <label class="fl-field" style="gap:4px"><span class="fl-label">Max reviews / day</span>
+        <input class="fl-input" type="number" name="reviews_per_day" value="{{ reviews_per_day }}" min="0" max="99999" required style="width:120px"></label>
+    </div>
+    <div class="row"><button class="fl-btn fl-btn-sm fl-btn-primary" type="submit">Save</button>
+    {% if saved == "limits" %}<span class="save-note fl-badge-toast" role="status">Saved</span>{% endif %}</div>
+  </form>
+</div>
+
+<div class="fl-card fl-card-pad" id="grading-card" style="display:flex;flex-direction:column;gap:14px">
+  <div>
+    <h3>Voice grading</h3>
+    <p class="fl-hint" style="margin-top:4px">How your AI reports grades when you study by voice.</p>
+  </div>
+  <form method="post" action="/settings/grading" hx-boost="true" hx-push-url="false" hx-select="#grading-card" hx-target="#grading-card" hx-swap="outerHTML show:none" style="display:flex;flex-direction:column;gap:10px;align-items:flex-start">
+    <label class="fl-check"><input type="radio" name="mode" value="silent" {% if grading_mode == "silent" %}checked{% endif %}> Silent — grades quietly and keeps the conversation moving</label>
+    <label class="fl-check"><input type="radio" name="mode" value="announce" {% if grading_mode == "announce" %}checked{% endif %}> Announce — says the grade; you can override it</label>
+    <label class="fl-check"><input type="radio" name="mode" value="self" {% if grading_mode == "self" %}checked{% endif %}> Self-grade — asks you to rate every card</label>
+    <div class="row"><button class="fl-btn fl-btn-sm fl-btn-primary" type="submit">Save</button>
+    {% if saved == "grading" %}<span class="save-note fl-badge-toast" role="status">Saved</span>{% endif %}</div>
+  </form>
+</div>
+
+<div class="fl-card fl-card-pad" id="password-card" style="display:flex;flex-direction:column;gap:12px">
+  <div class="row">
+    <h3>Password</h3>
+    {% if pw_error %}<span class="fl-badge fl-badge-warn">that didn't work — check the current password and that the new ones match (8+ characters)</span>{% endif %}
+  </div>
+  {% if !has_password %}
+  <p class="fl-hint">Add a password to sign in without a passkey{% if has_external_login %} or a connected account{% endif %}.</p>
+  <form method="post" action="/settings/password/set" hx-boost="true" hx-push-url="false" hx-select="#password-card" hx-target="#password-card" hx-swap="outerHTML show:none" style="display:flex;flex-direction:column;gap:10px;max-width:340px">
+    <input class="fl-input" type="password" name="password" required minlength="8" maxlength="512" autocomplete="new-password" placeholder="Password (8+ characters)">
+    <input class="fl-input" type="password" name="confirm" required minlength="8" maxlength="512" autocomplete="new-password" placeholder="Confirm password">
+    <div class="row"><button class="fl-btn fl-btn-sm fl-btn-secondary" type="submit">Set password</button>{% if pw_saved %}<span class="save-note fl-badge-toast" role="status">Saved</span>{% endif %}</div>
+  </form>
+  {% else %}
+  <form method="post" action="/settings/password/change" hx-boost="true" hx-push-url="false" hx-select="#password-card" hx-target="#password-card" hx-swap="outerHTML show:none" style="display:flex;flex-direction:column;gap:10px;max-width:340px">
+    <input class="fl-input" type="password" name="current" required maxlength="512" autocomplete="current-password" placeholder="Current password">
+    <input class="fl-input" type="password" name="password" required minlength="8" maxlength="512" autocomplete="new-password" placeholder="New password (8+ characters)">
+    <input class="fl-input" type="password" name="confirm" required minlength="8" maxlength="512" autocomplete="new-password" placeholder="Confirm new password">
+    <div class="row"><button class="fl-btn fl-btn-sm fl-btn-secondary" type="submit">Change password</button>{% if pw_saved %}<span class="save-note fl-badge-toast" role="status">Saved</span>{% endif %}</div>
+    <span class="fl-hint">Changing your password signs out your other devices.</span>
+  </form>
+  {% if has_passkey || has_external_login %}
+  <form method="post" action="/settings/password/remove" hx-boost="true" hx-push-url="false" hx-select="#password-card" hx-target="#password-card" hx-swap="outerHTML show:none" class="row" style="border-top:1px solid var(--stroke);padding-top:12px">
+    <input class="fl-input" type="password" name="current" required maxlength="512" autocomplete="current-password" placeholder="Current password" style="max-width:220px">
+    <button class="fl-btn fl-btn-sm fl-btn-ghost" type="submit">Remove password</button>
+    {% if pw_saved %}<span class="save-note fl-badge-toast" role="status">Saved</span>{% endif %}
+  </form>
+  {% else %}
+  <p class="fl-hint">Tip: passkeys are faster and phishing-resistant — you can add one the next
+  time you're invited to enroll a device.</p>
+  {% endif %}
+  {% endif %}
+</div>
+
+<div class="fl-card fl-card-pad" style="display:flex;flex-direction:column;gap:12px">
+  <h3>Passkeys</h3>
+  {% if passkeys.is_empty() %}
+  <p class="fl-hint">None enrolled.</p>
+  {% else %}
+  {% for pk in passkeys %}
+  <div style="display:flex;justify-content:space-between;border-top:1px solid var(--stroke);padding-top:12px;font-size:var(--text-sm)">
+    <span>{{ pk.label }}</span><span class="mono muted" style="font-size:var(--text-xs)">added {{ pk.created }}</span>
+  </div>
+  {% endfor %}
+  {% endif %}
+</div>
+
+<div class="fl-card fl-card-pad" id="apps-card" style="display:flex;flex-direction:column;gap:12px">
+  <div class="row">
+    <h3>Connected apps</h3>
+    {% if saved == "apps" %}<span class="save-note fl-badge-toast" role="status">Disconnected</span>{% endif %}
+  </div>
+  <p class="fl-hint" style="margin-top:-6px">Everything that can read and change your cards on your behalf. Disconnecting signs it out everywhere; it can ask to connect again.</p>
+  {% if apps.is_empty() %}
+  <p class="fl-hint">Nothing connected.</p>
+  {% else %}
+  {% for a in apps %}
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid var(--stroke);padding-top:12px;font-size:var(--text-sm)">
+    <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+      <span>{{ a.name }}</span>
+      <span class="mono muted" style="font-size:var(--text-xs)">{% if a.first_party %}{{ a.tokens }} device{% if a.tokens != 1 %}s{% endif %} · {% endif %}since {{ a.since }}{% if !a.last_used.is_empty() %} · last used {{ a.last_used }}{% endif %}</span>
+    </div>
+    <form method="post" action="/settings/apps/disconnect" hx-boost="true" hx-push-url="false" hx-select="#apps-card" hx-target="#apps-card" hx-swap="outerHTML show:none">
+      <input type="hidden" name="client_id" value="{{ a.client_id }}">
+      <button class="fl-btn fl-btn-sm fl-btn-secondary" type="submit">Disconnect</button>
+    </form>
+  </div>
+  {% endfor %}
+  {% endif %}
+</div>
+
+{{ providers_html|safe }}
+
+{% if shell.is_admin %}
+<div class="fl-card fl-card-pad" id="invite-card" style="display:flex;flex-direction:column;gap:12px">
+  <div>
+    <h3>Invite someone (admin)</h3>
+    <p class="fl-hint" style="margin-top:4px">Creates a one-time enrollment link, valid for 7 days.
+    Whoever opens it picks a passkey or a password and is in.</p>
+  </div>
+  <form class="row" method="post" action="/settings/invite" hx-boost="true" hx-push-url="false" hx-select="#invite-card" hx-target="#invite-card" hx-swap="outerHTML show:none">
+    <input class="fl-input" type="text" name="display_name" placeholder="Their name" required maxlength="80">
+    <button class="fl-btn fl-btn-secondary" type="submit">Create invite</button>
+  </form>
+  {% if let Some(url) = invite_url %}
+  <p class="fl-hint">Send them this link (shown once):</p>
+  <div class="token-box" id="invite-url">{{ url }}</div>
+  <div><button type="button" class="fl-btn fl-btn-sm fl-btn-secondary" data-copy-target="invite-url">Copy link</button></div>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="fl-card fl-card-pad card-row">
+  <div>
+    <h3>Appearance</h3>
+    <p class="fl-hint" style="margin-top:4px">Dark is the default.</p>
+  </div>
+  <form class="row" method="post" action="/settings/appearance" style="flex:none">
+    <select class="fl-input fl-select" name="theme" style="width:140px">
+      <option value="dark" {% if shell.theme == "dark" %}selected{% endif %}>Dark</option>
+      <option value="light" {% if shell.theme == "light" %}selected{% endif %}>Light</option>
+      <option value="clay" {% if shell.theme == "clay" %}selected{% endif %}>Clay</option>
+      <option value="mocha" {% if shell.theme == "mocha" %}selected{% endif %}>Mocha</option>
+      <option value="taupe" {% if shell.theme == "taupe" %}selected{% endif %}>Taupe</option>
+    </select>
+    <button class="fl-btn fl-btn-sm fl-btn-secondary" type="submit">Save</button>
+  </form>
+</div>
+
+<div class="fl-card fl-card-pad" style="display:flex;flex-direction:column;gap:12px;border-color:var(--bad-dim)">
+  <div class="row">
+    <h3>Delete account</h3>
+    {% if delete_error.as_str() == "confirm" %}<span class="fl-badge fl-badge-warn">type DELETE exactly to confirm</span>{% endif %}
+    {% if delete_error.as_str() == "password" %}<span class="fl-badge fl-badge-warn">that password is incorrect</span>{% endif %}
+    {% if delete_error.as_str() == "admin" %}<span class="fl-badge fl-badge-warn">you're the only admin — make someone else admin first</span>{% endif %}
+    {{ delete_badge_html|safe }}
+  </div>
+  <p class="fl-hint">Permanently removes your account and everything in it: decks, cards, review
+  history, media, passkeys, sessions, and any connected AI. This can't be undone.</p>
+{{ delete_note_html|safe }}
+  <p class="fl-hint">Want a copy first? <a href="/export.apkg">Anki .apkg</a> · <a href="/export.csv">CSV</a></p>
+  <form method="post" action="/settings/delete-account" style="display:flex;flex-direction:column;gap:10px;max-width:340px">
+    <input class="fl-input" type="text" name="confirm" required pattern="DELETE" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Type DELETE to confirm" title="Type DELETE in capitals">
+    {% if has_password %}
+    {# one-time-code, not current-password: password managers must neither
+       pre-fill the credential that authorizes deleting the account nor
+       offer to save "DELETE" + password as a login afterwards. #}
+    <input class="fl-input" type="password" name="current" required maxlength="512" autocomplete="one-time-code" placeholder="Current password">
+    {% endif %}
+    <div><button class="fl-btn fl-btn-sm fl-btn-secondary" type="submit" style="color:var(--bad);border-color:var(--bad)">Delete my account</button></div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+# Flash, self-hosted. Copy .env.example to .env, set FLASH_BASE_URL, then
+#   docker compose up -d
+#   docker compose logs flash | grep enroll     # the first admin's link
+# Put a TLS reverse proxy (or a tunnel) in front of port 8437;
+# Flash itself speaks plain HTTP on the loopback binding below.
+services:
+  flash:
+    image: ghcr.io/flash-cards/flash:latest
+    # To build from this checkout instead of pulling: comment out `image`
+    # and uncomment the next line.
+    # build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8437:8437"
+    env_file: .env
+    volumes:
+      - flash-data:/data
+    # The process needs nothing the image does not already have: no
+    # capabilities, no privilege escalation, a read-only root filesystem
+    # with only /data and a private /tmp (import scratch space) writable.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  flash-data:
