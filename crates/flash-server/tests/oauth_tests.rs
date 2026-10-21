@@ -217,6 +217,83 @@ async fn metadata_endpoints_are_served() {
     assert_eq!(body["resource"], format!("{BASE}/mcp"));
 }
 
+/// Clients that discover through OIDC, or insert the resource path into
+/// the well-known URL, land on the same authorization-server document.
+#[tokio::test]
+async fn discovery_aliases_serve_the_authorization_server_metadata() {
+    let h = harness();
+    for path in [
+        "/.well-known/oauth-authorization-server/mcp",
+        "/.well-known/openid-configuration",
+        "/.well-known/openid-configuration/mcp",
+    ] {
+        let (status, _, body) =
+            send(&h.app, Request::get(path).body(Body::empty()).unwrap()).await;
+        assert_eq!(status, StatusCode::OK, "{path}");
+        assert_eq!(body["issuer"], BASE, "{path}");
+        assert_eq!(body["token_endpoint"], format!("{BASE}/oauth/token"), "{path}");
+    }
+}
+
+#[test]
+fn public_host_ignores_path_and_trailing_slash() {
+    use flash_server::mcp::public_host;
+    assert_eq!(public_host("http://localhost:8437"), "localhost:8437");
+    assert_eq!(public_host("https://flash.example.com/"), "flash.example.com");
+    assert_eq!(public_host("https://flash.example.com:8443/app/"), "flash.example.com:8443");
+    assert_eq!(public_host("not a url"), "localhost:8437");
+}
+
+/// A resource indicator naming the origin is accepted as well as the
+/// `/mcp` endpoint; anything else is still refused.
+#[tokio::test]
+async fn authorize_accepts_the_origin_as_resource() {
+    let h = harness();
+    let client_id = register_client(&h).await;
+    let registered = "https%3A%2F%2Fclient.example.com%2Fcallback";
+    for (resource, expected) in [
+        ("http%3A%2F%2Flocalhost%3A8437", StatusCode::OK),
+        ("http%3A%2F%2Flocalhost%3A8437%2F", StatusCode::OK),
+        ("http%3A%2F%2Flocalhost%3A8437%2Fother", StatusCode::BAD_REQUEST),
+    ] {
+        let r = common::send(
+            &h.app,
+            Request::get(format!(
+                "/oauth/authorize?response_type=code&client_id={client_id}&redirect_uri={registered}&code_challenge=x&code_challenge_method=S256&resource={resource}"
+            ))
+            .header(header::COOKIE, &h.session_cookie)
+            .body(Body::empty())
+            .unwrap(),
+        )
+        .await;
+        assert_eq!(r.status, expected, "{resource}");
+    }
+}
+
+/// A client that sends a `client_secret` anyway (it never had one to
+/// send, being public) still completes the exchange: the field is ignored.
+#[tokio::test]
+async fn token_exchange_ignores_a_stray_client_secret() {
+    let h = harness();
+    let client_id = register_client(&h).await;
+    let verifier = "b".repeat(50);
+    let code = get_code(&h, &client_id, &s256(&verifier)).await;
+    let (status, _, body) = send(
+        &h.app,
+        Request::post("/oauth/token")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .body(Body::from(format!(
+                "grant_type=authorization_code&code={code}\
+                 &redirect_uri=https%3A%2F%2Fclient.example.com%2Fcallback\
+                 &client_id={client_id}&code_verifier={verifier}&client_secret=unused"
+            )))
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert!(body["access_token"].is_string());
+}
+
 #[tokio::test]
 async fn full_pkce_flow_and_bearer_access() {
     let h = harness();

@@ -32,6 +32,21 @@ pub fn router() -> Router<AppState> {
             "/.well-known/oauth-authorization-server",
             get(authorization_server_metadata),
         )
+        // Clients that discover through OIDC (or insert the resource path
+        // into the well-known URL, RFC 8414 section 3.1) get the same
+        // document; the issuer has no path of its own.
+        .route(
+            "/.well-known/oauth-authorization-server/mcp",
+            get(authorization_server_metadata),
+        )
+        .route(
+            "/.well-known/openid-configuration",
+            get(authorization_server_metadata),
+        )
+        .route(
+            "/.well-known/openid-configuration/mcp",
+            get(authorization_server_metadata),
+        )
         .route(
             "/.well-known/oauth-protected-resource",
             get(protected_resource_metadata),
@@ -336,10 +351,12 @@ async fn authorize(
         return authorize_error("invalid_request", theme);
     }
     // RFC 8707: a resource indicator, when given, must be this server's
-    // MCP endpoint; a token for somewhere else is not something to mint.
+    // MCP endpoint (or its origin, which some clients send instead); a
+    // token for somewhere else is not something to mint.
     if let Some(resource) = params.resource.as_deref() {
-        let ours = format!("{}/mcp", state.config.base_url);
-        if resource.trim_end_matches('/') != ours {
+        let base = state.config.base_url.trim_end_matches('/');
+        let resource = resource.trim_end_matches('/');
+        if resource != base && resource != format!("{base}/mcp") {
             return authorize_error("invalid_target", theme);
         }
     }

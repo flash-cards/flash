@@ -42,13 +42,7 @@ pub fn build_app(state: AppState) -> Router {
     let ext = state.ext.clone();
     let rate_limit =
         axum::middleware::from_fn_with_state(state.clone(), middleware::auth_rate_limit);
-    let public_host = state
-        .config
-        .base_url
-        .split("//")
-        .nth(1)
-        .unwrap_or("localhost:8437")
-        .to_string();
+    let public_host = mcp::public_host(&state.config.base_url);
     let mcp_routes = Router::new()
         .route(
             "/mcp-media/{id}",
