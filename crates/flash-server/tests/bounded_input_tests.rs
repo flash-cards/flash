@@ -289,7 +289,10 @@ async fn a_url_past_the_cap_is_refused_before_routing() {
     // The authorize endpoint alone carries a larger ceiling. The bound
     // counts path plus query without the `?`, so the string is one longer.
     let authorize = |len: usize| {
-        format!("/oauth/authorize?state={}", "a".repeat(len - "/oauth/authorize?state=".len()))
+        format!(
+            "/oauth/authorize?state={}",
+            "a".repeat(len - "/oauth/authorize?state=".len())
+        )
     };
     let res = send(
         &t.app,

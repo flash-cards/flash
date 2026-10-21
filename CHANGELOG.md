@@ -8,6 +8,19 @@ names the issue it answers and the person who raised it.
 
 ## [Unreleased]
 
+### Fixed
+
+- Gemini's custom MCP connector now connects. Flash serves the
+  authorization-server metadata at the path-suffixed well-known URL,
+  accepts the server origin as the OAuth `resource`, accepts an OAuth
+  `state` of up to 4 KB (including through the sign-in redirect), and
+  answers MCP requests with plain JSON instead of an SSE stream that
+  opened with a `retry:` frame Gemini could not parse. The MCP endpoint
+  is now stateless: `GET /mcp` and `DELETE /mcp` answer 405 and no
+  `Mcp-Session-Id` is issued, which the MCP specification allows and
+  the clients we tried (Gemini, Grok, ChatGPT, Claude) accept.
+  (#10, reported by @DHEERAJKUMAR24)
+
 ## [0.3.0] - 2026-09-19
 
 Upgrading from 0.2.0 needs the new image or binary and one step for each

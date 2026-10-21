@@ -791,7 +791,10 @@ async fn initialize(h: &Harness) -> String {
     // A bare JSON reply, not an SSE stream: no `retry:` or priming frame
     // for a strict client to trip over.
     assert!(!body.contains("retry:"), "{body}");
-    assert!(serde_json::from_str::<serde_json::Value>(&body).is_ok(), "{body}");
+    assert!(
+        serde_json::from_str::<serde_json::Value>(&body).is_ok(),
+        "{body}"
+    );
     let result = result_of(&body);
     assert!(
         result["instructions"]

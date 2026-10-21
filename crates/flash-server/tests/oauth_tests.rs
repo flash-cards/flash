@@ -115,7 +115,9 @@ async fn get_code_with(
     state: &str,
     resource: Option<&str>,
 ) -> String {
-    let resource = resource.map(|r| format!("&resource={r}")).unwrap_or_default();
+    let resource = resource
+        .map(|r| format!("&resource={r}"))
+        .unwrap_or_default();
     let uri = format!(
         "/oauth/authorize?response_type=code&client_id={client_id}\
          &redirect_uri=https%3A%2F%2Fclient.example.com%2Fcallback\
@@ -239,14 +241,24 @@ async fn path_suffixed_discovery_serves_the_authorization_server_metadata() {
     let (status, _, body) = send(&h.app, Request::get(path).body(Body::empty()).unwrap()).await;
     assert_eq!(status, StatusCode::OK, "{path}");
     assert_eq!(body["issuer"], BASE, "{path}");
-    assert_eq!(body["token_endpoint"], format!("{BASE}/oauth/token"), "{path}");
+    assert_eq!(
+        body["token_endpoint"],
+        format!("{BASE}/oauth/token"),
+        "{path}"
+    );
 }
 
 #[test]
 fn public_host_ignores_path_and_trailing_slash() {
     use flash_server::mcp::public_host;
-    assert_eq!(public_host("http://localhost:8437").as_deref(), Some("localhost:8437"));
-    assert_eq!(public_host("https://flash.example.com/").as_deref(), Some("flash.example.com"));
+    assert_eq!(
+        public_host("http://localhost:8437").as_deref(),
+        Some("localhost:8437")
+    );
+    assert_eq!(
+        public_host("https://flash.example.com/").as_deref(),
+        Some("flash.example.com")
+    );
     assert_eq!(
         public_host("https://flash.example.com:8443/app/").as_deref(),
         Some("flash.example.com:8443")
@@ -264,7 +276,10 @@ async fn authorize_accepts_the_origin_as_resource() {
     for (resource, expected) in [
         ("http%3A%2F%2Flocalhost%3A8437", StatusCode::OK),
         ("http%3A%2F%2Flocalhost%3A8437%2F", StatusCode::OK),
-        ("http%3A%2F%2Flocalhost%3A8437%2Fother", StatusCode::BAD_REQUEST),
+        (
+            "http%3A%2F%2Flocalhost%3A8437%2Fother",
+            StatusCode::BAD_REQUEST,
+        ),
     ] {
         let r = common::send(
             &h.app,
@@ -311,7 +326,10 @@ async fn authorize_accepts_a_long_state_up_to_the_bound() {
 #[tokio::test]
 async fn the_long_url_paths_are_real_routes() {
     let h = harness();
-    for path in [flash_server::bounds::AUTHORIZE_PATH, flash_server::bounds::LOGIN_PATH] {
+    for path in [
+        flash_server::bounds::AUTHORIZE_PATH,
+        flash_server::bounds::LOGIN_PATH,
+    ] {
         let r = common::send(&h.app, Request::get(path).body(Body::empty()).unwrap()).await;
         assert_ne!(r.status, StatusCode::NOT_FOUND, "{path}");
     }
@@ -342,11 +360,7 @@ async fn a_long_state_survives_the_sign_in_redirect() {
         .map(|(_, v)| v.clone())
         .expect("a Location header");
     assert!(location.starts_with("/login?next="), "{}", &location[..40]);
-    let login = common::send(
-        &h.app,
-        Request::get(&location).body(Body::empty()).unwrap(),
-    )
-    .await;
+    let login = common::send(&h.app, Request::get(&location).body(Body::empty()).unwrap()).await;
     assert_eq!(login.status, StatusCode::OK);
 }
 
@@ -434,7 +448,10 @@ async fn issue_10_the_gemini_connector_flow_completes() {
     .await;
     assert_eq!(r.status, StatusCode::OK);
     let content_type = header_of(&r.headers, "content-type").unwrap_or_default();
-    assert!(content_type.starts_with("application/json"), "{content_type}");
+    assert!(
+        content_type.starts_with("application/json"),
+        "{content_type}"
+    );
     assert!(header_of(&r.headers, "mcp-session-id").is_none());
     assert!(r.json()["result"]["serverInfo"]["name"] == "flash");
 }
