@@ -42,11 +42,13 @@ pub const TIMEZONE: usize = 64;
 /// Enum-shaped strings: a theme, a grading mode, a note type, a colour
 /// choice, a decision, a saved-flag.
 pub const KEYWORD: usize = 32;
-/// A local path to return to after sign-in.
-pub const NEXT_PATH: usize = 512;
-/// OAuth request parameters (RFC 6749 leaves these unbounded; a real
-/// client's are a few hundred bytes).
-pub const OAUTH_STATE: usize = 512;
+/// A local path to return to after sign-in. It can be a whole authorize
+/// request (`/oauth/authorize?...&state=...`), so it matches that ceiling.
+pub const NEXT_PATH: usize = AUTHORIZE_URI;
+/// OAuth request parameters (RFC 6749 leaves these unbounded). `state` is
+/// opaque to us and echoed back in the redirect; some clients (Gemini's
+/// connector among them) pack a kilobyte or more into it.
+pub const OAUTH_STATE: usize = 4_096;
 pub const OAUTH_SCOPE: usize = 256;
 pub const OAUTH_RESOURCE: usize = 500;
 /// RFC 7636: 43 to 128 characters of unreserved ASCII.
@@ -70,7 +72,30 @@ pub const REASON: usize = 2_000;
 pub const CAPTCHA_TOKEN: usize = 2_048;
 /// Path plus query of any request, enforced by `middleware::uri_length`
 /// before routing: the bound on every `Path<String>` and `RawQuery`.
+/// `uri_cap` raises it for the authorize and sign-in routes only.
 pub const URI: usize = 2_048;
+/// The two routes that carry an OAuth authorize request in their URL: the
+/// authorize endpoint itself, and the sign-in page it sends a signed-out
+/// browser to with the whole request as `next`. The routes are declared
+/// with literals (the route scan reads them); a test checks these match,
+/// so a renamed route cannot silently lose the larger cap.
+pub const AUTHORIZE_PATH: &str = "/oauth/authorize";
+pub const LOGIN_PATH: &str = "/login";
+/// Their ceiling: a redirect URI, a state and a resource, each bounded
+/// above, with percent-encoding on top. Every known field is still checked
+/// against its own bound; anything else in the query is dropped, but is
+/// capped here.
+pub const AUTHORIZE_URI: usize = 16 * 1_024;
+
+/// The path-plus-query ceiling for a request to `path`: `URI`, except on
+/// the routes that carry an authorize request.
+pub fn uri_cap(path: &str) -> usize {
+    if path == AUTHORIZE_PATH || path == LOGIN_PATH {
+        AUTHORIZE_URI
+    } else {
+        URI
+    }
+}
 /// A filename a client attaches to an upload, before the store shortens
 /// it to what it keeps.
 pub const FILENAME: usize = 255;

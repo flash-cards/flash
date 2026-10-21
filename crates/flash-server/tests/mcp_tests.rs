@@ -46,6 +46,31 @@ async fn tool_error(h: &Harness, session: &str, name: &str, args: serde_json::Va
     body
 }
 
+/// The endpoint is stateless: no handshake, no session id, and every
+/// request is answered on its own. (The other tests' `initialize` returns
+/// an empty session for the same reason.)
+#[tokio::test]
+async fn requests_share_no_state_and_need_no_handshake() {
+    let h = harness();
+    for id in [1, 2] {
+        let (status, session, body) = rpc(
+            &h,
+            None,
+            serde_json::json!({"jsonrpc": "2.0", "id": id, "method": "tools/list"}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert!(session.is_none(), "no session id issued");
+        assert!(!body.contains("retry:"), "{body}");
+        assert!(
+            result_of(&body)["tools"]
+                .as_array()
+                .is_some_and(|tools| !tools.is_empty()),
+            "{body}"
+        );
+    }
+}
+
 #[tokio::test]
 async fn rich_batch_edits_preserve_media_siblings_and_history_and_rollback() {
     let h = harness();
@@ -185,7 +210,7 @@ async fn rich_batch_edits_preserve_media_siblings_and_history_and_rollback() {
 }
 
 #[tokio::test]
-async fn batch_delete_confirms_across_sessions_and_retries_without_expanding_targets() {
+async fn batch_delete_confirms_across_clients_and_retries_without_expanding_targets() {
     let h = harness();
     let session = initialize(&h).await;
     let made=call_tool(&h,&session,810,"create_cards",serde_json::json!({"deck":"Delete","cards":[{"front_html":"one","back_html":"a"},{"front_html":"two","back_html":"b"}]})).await;
@@ -699,7 +724,7 @@ async fn rpc(
         .header(header::AUTHORIZATION, format!("Bearer {}", h.bearer))
         .header(header::CONTENT_TYPE, "application/json")
         .header(header::ACCEPT, "application/json, text/event-stream");
-    if let Some(session) = session {
+    if let Some(session) = session.filter(|s| !s.is_empty()) {
         request = request.header("mcp-session-id", session);
     }
     let response = h
@@ -724,7 +749,11 @@ async fn rpc(
 fn result_of(body: &str) -> serde_json::Value {
     // SSE streams open with a priming frame (`data:` + retry); take the
     // first data line that actually carries JSON.
-    let json_part = if body.contains("data:") {
+    // A bare JSON body is the normal reply; only fall back to SSE framing
+    // when it does not parse (the icon's `data:` URI is not a frame).
+    let json_part = if serde_json::from_str::<serde_json::Value>(body).is_ok() {
+        body.to_string()
+    } else if body.contains("data:") {
         body.lines()
             .filter_map(|l| l.strip_prefix("data:"))
             .map(str::trim)
@@ -759,6 +788,10 @@ async fn initialize(h: &Harness) -> String {
     )
     .await;
     assert_eq!(status, StatusCode::OK, "{body}");
+    // A bare JSON reply, not an SSE stream: no `retry:` or priming frame
+    // for a strict client to trip over.
+    assert!(!body.contains("retry:"), "{body}");
+    assert!(serde_json::from_str::<serde_json::Value>(&body).is_ok(), "{body}");
     let result = result_of(&body);
     assert!(
         result["instructions"]
@@ -767,7 +800,9 @@ async fn initialize(h: &Harness) -> String {
             .contains("study"),
         "server instructions present; raw body: {body}"
     );
-    let session = session.expect("session id assigned");
+    // Stateless: no session id is assigned, and none is sent back.
+    assert!(session.is_none(), "stateless server assigns no session");
+    let session = String::new();
     // Complete the handshake.
     let (status, _, _) = rpc(
         h,

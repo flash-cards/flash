@@ -87,18 +87,15 @@ const LIST_PAGE_BYTES: usize = 64 * 1024;
 
 /// The `host[:port]` a request through `base_url` carries in its Host
 /// header. Parsed as a URL so a trailing slash or path on the base URL
-/// does not leak into the allowlist entry.
-pub fn public_host(base_url: &str) -> String {
-    url::Url::parse(base_url)
-        .ok()
-        .and_then(|u| {
-            let host = u.host_str()?.to_string();
-            Some(match u.port() {
-                Some(port) => format!("{host}:{port}"),
-                None => host,
-            })
-        })
-        .unwrap_or_else(|| "localhost:8437".to_string())
+/// does not leak into the allowlist entry. `None` when `base_url` has no
+/// host; boot already rejects such a FLASH_BASE_URL.
+pub fn public_host(base_url: &str) -> Option<String> {
+    let u = url::Url::parse(base_url).ok()?;
+    let host = u.host_str()?;
+    Some(match u.port() {
+        Some(port) => format!("{host}:{port}"),
+        None => host.to_string(),
+    })
 }
 
 /// `public_host` is the authority of FLASH_BASE_URL: rmcp validates the
@@ -121,6 +118,15 @@ pub fn mcp_service(
     // that applies to it (an axum body-limit layer around the service is
     // a marker its extractors consult and this service never does).
     config.max_request_body_bytes = MCP_BODY_LIMIT;
+    // Every tool is a plain request and response, so answer in JSON with no
+    // session: the default opens each reply as an SSE stream led by `retry:`
+    // and priming frames, which some clients (Gemini's connector) cannot
+    // parse and drop the connection on.
+    config.legacy_session_mode = false;
+    config.json_response = true;
+    // If a tool ever does emit a notification, rmcp falls back to SSE for
+    // that reply; without the priming frame it stays parseable.
+    config.sse_retry = None;
     StreamableHttpService::new(
         move || {
             Ok(FlashMcp::new(

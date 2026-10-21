@@ -282,7 +282,7 @@ pub fn clean_next(raw: Option<String>) -> String {
 /// and `/<tab>/host` are protocol-relative too. Control characters are
 /// also refused because they cannot be placed in a Location header.
 pub fn is_local_path(n: &str) -> bool {
-    n.len() <= 512
+    n.len() <= crate::bounds::NEXT_PATH
         && n.starts_with('/')
         && !n.starts_with("//")
         && !n.starts_with("/\\")

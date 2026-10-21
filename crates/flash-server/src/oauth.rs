@@ -32,19 +32,12 @@ pub fn router() -> Router<AppState> {
             "/.well-known/oauth-authorization-server",
             get(authorization_server_metadata),
         )
-        // Clients that discover through OIDC (or insert the resource path
-        // into the well-known URL, RFC 8414 section 3.1) get the same
-        // document; the issuer has no path of its own.
+        // Clients that insert the resource path into the well-known URL
+        // (RFC 8414 section 3.1) get the same document; the issuer has no
+        // path of its own. No OpenID Connect aliases: this is an OAuth
+        // server, and its metadata lacks what OIDC discovery requires.
         .route(
             "/.well-known/oauth-authorization-server/mcp",
-            get(authorization_server_metadata),
-        )
-        .route(
-            "/.well-known/openid-configuration",
-            get(authorization_server_metadata),
-        )
-        .route(
-            "/.well-known/openid-configuration/mcp",
             get(authorization_server_metadata),
         )
         .route(

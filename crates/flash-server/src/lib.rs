@@ -42,7 +42,8 @@ pub fn build_app(state: AppState) -> Router {
     let ext = state.ext.clone();
     let rate_limit =
         axum::middleware::from_fn_with_state(state.clone(), middleware::auth_rate_limit);
-    let public_host = mcp::public_host(&state.config.base_url);
+    let public_host = mcp::public_host(&state.config.base_url)
+        .expect("FLASH_BASE_URL is checked for a host when the state is built");
     let mcp_routes = Router::new()
         .route(
             "/mcp-media/{id}",

@@ -285,4 +285,26 @@ async fn a_url_past_the_cap_is_refused_before_routing() {
     )
     .await;
     assert_ne!(res.status, StatusCode::URI_TOO_LONG);
+
+    // The authorize endpoint alone carries a larger ceiling. The bound
+    // counts path plus query without the `?`, so the string is one longer.
+    let authorize = |len: usize| {
+        format!("/oauth/authorize?state={}", "a".repeat(len - "/oauth/authorize?state=".len()))
+    };
+    let res = send(
+        &t.app,
+        Request::get(authorize(bounds::AUTHORIZE_URI + 1))
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
+    assert_ne!(res.status, StatusCode::URI_TOO_LONG);
+    let res = send(
+        &t.app,
+        Request::get(authorize(bounds::AUTHORIZE_URI + 2))
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(res.status, StatusCode::URI_TOO_LONG);
 }

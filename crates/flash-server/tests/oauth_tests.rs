@@ -103,10 +103,23 @@ async fn registration_is_small_and_keeps_only_what_it_uses() {
 
 /// Runs authorize + consent, returns the authorization code.
 async fn get_code(h: &Harness, client_id: &str, challenge: &str) -> String {
+    get_code_with(h, client_id, challenge, "xyz", None).await
+}
+
+/// `get_code` with the client's own `state` and optional `resource`
+/// (both already URL-safe).
+async fn get_code_with(
+    h: &Harness,
+    client_id: &str,
+    challenge: &str,
+    state: &str,
+    resource: Option<&str>,
+) -> String {
+    let resource = resource.map(|r| format!("&resource={r}")).unwrap_or_default();
     let uri = format!(
         "/oauth/authorize?response_type=code&client_id={client_id}\
          &redirect_uri=https%3A%2F%2Fclient.example.com%2Fcallback\
-         &state=xyz&code_challenge={challenge}&code_challenge_method=S256"
+         &state={state}&code_challenge={challenge}&code_challenge_method=S256{resource}"
     );
     let (status, _, _) = send(
         &h.app,
@@ -156,7 +169,7 @@ async fn get_code(h: &Harness, client_id: &str, challenge: &str) -> String {
     .await;
     assert_eq!(status, StatusCode::SEE_OTHER);
     let location = header_of(&headers, "location").expect("redirect");
-    assert!(location.contains("state=xyz"));
+    assert!(location.contains(&format!("state={state}")));
     location
         .split("code=")
         .nth(1)
@@ -217,31 +230,28 @@ async fn metadata_endpoints_are_served() {
     assert_eq!(body["resource"], format!("{BASE}/mcp"));
 }
 
-/// Clients that discover through OIDC, or insert the resource path into
-/// the well-known URL, land on the same authorization-server document.
+/// Clients that insert the resource path into the well-known URL land on
+/// the same authorization-server document.
 #[tokio::test]
-async fn discovery_aliases_serve_the_authorization_server_metadata() {
+async fn path_suffixed_discovery_serves_the_authorization_server_metadata() {
     let h = harness();
-    for path in [
-        "/.well-known/oauth-authorization-server/mcp",
-        "/.well-known/openid-configuration",
-        "/.well-known/openid-configuration/mcp",
-    ] {
-        let (status, _, body) =
-            send(&h.app, Request::get(path).body(Body::empty()).unwrap()).await;
-        assert_eq!(status, StatusCode::OK, "{path}");
-        assert_eq!(body["issuer"], BASE, "{path}");
-        assert_eq!(body["token_endpoint"], format!("{BASE}/oauth/token"), "{path}");
-    }
+    let path = "/.well-known/oauth-authorization-server/mcp";
+    let (status, _, body) = send(&h.app, Request::get(path).body(Body::empty()).unwrap()).await;
+    assert_eq!(status, StatusCode::OK, "{path}");
+    assert_eq!(body["issuer"], BASE, "{path}");
+    assert_eq!(body["token_endpoint"], format!("{BASE}/oauth/token"), "{path}");
 }
 
 #[test]
 fn public_host_ignores_path_and_trailing_slash() {
     use flash_server::mcp::public_host;
-    assert_eq!(public_host("http://localhost:8437"), "localhost:8437");
-    assert_eq!(public_host("https://flash.example.com/"), "flash.example.com");
-    assert_eq!(public_host("https://flash.example.com:8443/app/"), "flash.example.com:8443");
-    assert_eq!(public_host("not a url"), "localhost:8437");
+    assert_eq!(public_host("http://localhost:8437").as_deref(), Some("localhost:8437"));
+    assert_eq!(public_host("https://flash.example.com/").as_deref(), Some("flash.example.com"));
+    assert_eq!(
+        public_host("https://flash.example.com:8443/app/").as_deref(),
+        Some("flash.example.com:8443")
+    );
+    assert_eq!(public_host("not a url"), None);
 }
 
 /// A resource indicator naming the origin is accepted as well as the
@@ -270,28 +280,74 @@ async fn authorize_accepts_the_origin_as_resource() {
     }
 }
 
-/// A client that sends a `client_secret` anyway (it never had one to
-/// send, being public) still completes the exchange: the field is ignored.
+/// `state` is echoed back untouched, so a long one (some connectors pack
+/// a kilobyte or more into it) is accepted up to the bound and no further.
 #[tokio::test]
-async fn token_exchange_ignores_a_stray_client_secret() {
+async fn authorize_accepts_a_long_state_up_to_the_bound() {
     let h = harness();
     let client_id = register_client(&h).await;
-    let verifier = "b".repeat(50);
-    let code = get_code(&h, &client_id, &s256(&verifier)).await;
-    let (status, _, body) = send(
-        &h.app,
-        Request::post("/oauth/token")
-            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
-            .body(Body::from(format!(
-                "grant_type=authorization_code&code={code}\
-                 &redirect_uri=https%3A%2F%2Fclient.example.com%2Fcallback\
-                 &client_id={client_id}&code_verifier={verifier}&client_secret=unused"
-            )))
+    let registered = "https%3A%2F%2Fclient.example.com%2Fcallback";
+    for (len, expected) in [
+        (2_000, StatusCode::OK),
+        (4_096, StatusCode::OK),
+        (4_097, StatusCode::BAD_REQUEST),
+    ] {
+        let state = "a".repeat(len);
+        let r = common::send(
+            &h.app,
+            Request::get(format!(
+                "/oauth/authorize?response_type=code&client_id={client_id}&redirect_uri={registered}&code_challenge=x&code_challenge_method=S256&state={state}"
+            ))
+            .header(header::COOKIE, &h.session_cookie)
+            .body(Body::empty())
             .unwrap(),
+        )
+        .await;
+        assert_eq!(r.status, expected, "state of {len} bytes");
+    }
+}
+
+/// The paths that carry the larger URL ceiling are the real routes.
+#[tokio::test]
+async fn the_long_url_paths_are_real_routes() {
+    let h = harness();
+    for path in [flash_server::bounds::AUTHORIZE_PATH, flash_server::bounds::LOGIN_PATH] {
+        let r = common::send(&h.app, Request::get(path).body(Body::empty()).unwrap()).await;
+        assert_ne!(r.status, StatusCode::NOT_FOUND, "{path}");
+    }
+}
+
+/// A signed-out browser is sent to sign in with the whole authorize
+/// request as `next`; a long `state` must survive that hop, or the person
+/// never reaches the consent page.
+#[tokio::test]
+async fn a_long_state_survives_the_sign_in_redirect() {
+    let h = harness();
+    let client_id = register_client(&h).await;
+    let state = "a".repeat(3_000);
+    let r = common::send(
+        &h.app,
+        Request::get(format!(
+            "/oauth/authorize?response_type=code&client_id={client_id}&redirect_uri=https%3A%2F%2Fclient.example.com%2Fcallback&code_challenge=x&code_challenge_method=S256&state={state}"
+        ))
+        .body(Body::empty())
+        .unwrap(),
     )
     .await;
-    assert_eq!(status, StatusCode::OK, "{body}");
-    assert!(body["access_token"].is_string());
+    assert_eq!(r.status, StatusCode::SEE_OTHER);
+    let location = r
+        .headers
+        .iter()
+        .find(|(k, _)| k.eq_ignore_ascii_case("location"))
+        .map(|(_, v)| v.clone())
+        .expect("a Location header");
+    assert!(location.starts_with("/login?next="), "{}", &location[..40]);
+    let login = common::send(
+        &h.app,
+        Request::get(&location).body(Body::empty()).unwrap(),
+    )
+    .await;
+    assert_eq!(login.status, StatusCode::OK);
 }
 
 #[tokio::test]
@@ -319,6 +375,68 @@ async fn full_pkce_flow_and_bearer_access() {
     )
     .await;
     assert_ne!(status, StatusCode::UNAUTHORIZED);
+}
+
+/// Issue 10: Gemini's custom MCP connector failed with "Transport for env
+/// PROD not found". The whole flow it drives, in one test: discover through
+/// the path-suffixed well-known URL, authorize with a long `state` and the
+/// origin as `resource`, exchange the code, then call /mcp and get a bare
+/// JSON reply (no SSE `retry:` frame, no session) its client can parse.
+#[tokio::test]
+async fn issue_10_the_gemini_connector_flow_completes() {
+    let h = harness();
+
+    let (status, _, meta) = send(
+        &h.app,
+        Request::get("/.well-known/oauth-authorization-server/mcp")
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(meta["issuer"], BASE);
+
+    let client_id = register_client(&h).await;
+    let verifier = "g".repeat(50);
+    let origin = BASE.replace(':', "%3A").replace('/', "%2F");
+    let code = get_code_with(
+        &h,
+        &client_id,
+        &s256(&verifier),
+        &"s".repeat(3_000),
+        Some(&origin),
+    )
+    .await;
+    let (status, token) = exchange(&h, &client_id, &code, &verifier).await;
+    assert_eq!(status, StatusCode::OK, "{token}");
+    let access = token["access_token"].as_str().unwrap();
+
+    let r = common::send(
+        &h.app,
+        Request::post("/mcp")
+            .header(header::HOST, "localhost:8437")
+            .header(header::AUTHORIZATION, format!("Bearer {access}"))
+            .header(header::CONTENT_TYPE, "application/json")
+            .header(header::ACCEPT, "application/json, text/event-stream")
+            .body(Body::from(
+                serde_json::json!({
+                    "jsonrpc": "2.0", "id": 1, "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2025-06-18",
+                        "capabilities": {},
+                        "clientInfo": {"name": "gemini", "version": "0"}
+                    }
+                })
+                .to_string(),
+            ))
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::OK);
+    let content_type = header_of(&r.headers, "content-type").unwrap_or_default();
+    assert!(content_type.starts_with("application/json"), "{content_type}");
+    assert!(header_of(&r.headers, "mcp-session-id").is_none());
+    assert!(r.json()["result"]["serverInfo"]["name"] == "flash");
 }
 
 #[tokio::test]

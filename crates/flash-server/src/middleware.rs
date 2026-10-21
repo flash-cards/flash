@@ -153,13 +153,15 @@ pub fn address_from_header(value: &str) -> Option<String> {
 /// Applied to /oauth/* and /auth/* routes.
 /// Every path segment and query string is bounded here, before routing:
 /// a `Path<String>` or `RawQuery` a handler takes is at most
-/// `bounds::URI` bytes by construction, so no handler has to say so.
+/// `bounds::uri_cap(path)` bytes by construction (`bounds::URI`, or the
+/// larger ceiling on the authorize and sign-in routes), so no handler has
+/// to say so.
 /// hyper's own limit is the whole request head (hundreds of kilobytes);
 /// a real URL of this application is a few hundred bytes.
 pub async fn uri_length(req: Request, next: Next) -> Response {
     let uri = req.uri();
     let len = uri.path().len() + uri.query().map(str::len).unwrap_or(0);
-    if len > crate::bounds::URI {
+    if len > crate::bounds::uri_cap(uri.path()) {
         return (StatusCode::URI_TOO_LONG, "the request URL is too long").into_response();
     }
     next.run(req).await
